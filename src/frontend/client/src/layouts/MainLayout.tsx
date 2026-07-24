@@ -50,11 +50,14 @@ function SidebarItem({ icon, activeIcon, to, active, label, showLabel = false, o
             'flex cursor-pointer rounded-lg transition-colors',
             showLabel
               ? 'mx-2 h-[44px] items-center justify-start gap-2 px-2 py-2 hover:bg-[#f2f3f5]'
-              : 'items-center justify-center p-3 hover:bg-[#f2f3f5]',
+              : 'bisheng-primary-nav-hit items-center justify-center p-3 hover:bg-[#f2f3f5]',
           )}
         >
           {React.cloneElement((active && activeIcon ? activeIcon : icon) as React.ReactElement, {
-            className: cn(showLabel ? 'size-4' : 'size-5', active ? "text-blue-500" : "text-[#818181]"),
+            className: cn(
+              showLabel ? 'bisheng-scalable-icon' : 'bisheng-primary-icon',
+              active ? "text-blue-500" : "text-[#818181]",
+            ),
           })}
           {showLabel ? (
             <span className={cn('text-[14px] leading-[20px]', active ? 'text-blue-500' : 'text-[#212121]')}>
@@ -212,7 +215,7 @@ function Sidebar({
   return (
     <div
       className={cn(
-        showExpandedHubSidebar ? (overlay ? 'w-full' : 'w-[38vw]') : 'w-16',
+        showExpandedHubSidebar ? (overlay ? 'w-full' : 'w-[38vw]') : 'bisheng-primary-rail',
         'h-[100dvh] flex flex-col justify-between py-4 px-2 shrink-0 bg-[rgb(227, 227, 227)]',
         // Rail: let the content column shrink to its 44px width instead of stretching the track.
         // Expanded drawer keeps the stretched full-width layout.
@@ -282,7 +285,7 @@ function Sidebar({
                 title={localize('com_nav_admin_panel')}
                 className="rounded-lg p-3 transition-colors hover:bg-[#f2f3f5]"
               >
-                <Outlined.DeviceDesktopExchange className="size-5 text-[#818181]" />
+                <Outlined.DeviceDesktopExchange className="bisheng-primary-icon text-[#818181]" />
               </div>
             </a>
             {/* Divider only makes sense alongside the admin-panel entry; hide both together. */}

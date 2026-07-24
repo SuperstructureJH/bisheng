@@ -24,6 +24,7 @@ import {
     useKnowledgeSpaceActionPermissions,
 } from "../hooks/useKnowledgeSpacePermissions";
 import { useDynamicEllipsis } from "../hooks/useDynamicEllipsis";
+import { FONT_SCALE_CHANGE_EVENT } from "~/utils/fontScale";
 
 interface KnowledgeSpaceSidebarProps {
     activeSpaceId?: string;
@@ -76,12 +77,19 @@ export function KnowledgeSpaceSidebar({
     const MIN_SIDEBAR_WIDTH = 200;
     const MAX_SIDEBAR_WIDTH = 480;
     const DEFAULT_SIDEBAR_WIDTH = 240;
+    const getTokenSidebarWidth = () => {
+        if (typeof window === "undefined") return DEFAULT_SIDEBAR_WIDTH;
+        const value = parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue("--bs-secondary-sidebar-width"),
+        );
+        return Number.isFinite(value) ? value : DEFAULT_SIDEBAR_WIDTH;
+    };
     const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
         if (typeof window === "undefined") return DEFAULT_SIDEBAR_WIDTH;
         const stored = parseInt(localStorage.getItem(SIDEBAR_WIDTH_KEY) || "", 10);
         return Number.isFinite(stored) && stored >= MIN_SIDEBAR_WIDTH && stored <= MAX_SIDEBAR_WIDTH
             ? stored
-            : DEFAULT_SIDEBAR_WIDTH;
+            : getTokenSidebarWidth();
     });
     const [isResizing, setIsResizing] = useState(false);
     const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -96,9 +104,20 @@ export function KnowledgeSpaceSidebar({
 
     // Double-click the resize handle → reset to default width
     const handleResizeReset = () => {
-        setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
-        if (typeof window !== "undefined") localStorage.setItem(SIDEBAR_WIDTH_KEY, String(DEFAULT_SIDEBAR_WIDTH));
+        const width = getTokenSidebarWidth();
+        setSidebarWidth(width);
+        if (typeof window !== "undefined") localStorage.removeItem(SIDEBAR_WIDTH_KEY);
     };
+
+    useEffect(() => {
+        const syncTokenWidth = () => {
+            if (!localStorage.getItem(SIDEBAR_WIDTH_KEY)) {
+                setSidebarWidth(getTokenSidebarWidth());
+            }
+        };
+        window.addEventListener(FONT_SCALE_CHANGE_EVENT, syncTokenWidth);
+        return () => window.removeEventListener(FONT_SCALE_CHANGE_EVENT, syncTokenWidth);
+    }, []);
 
     useEffect(() => {
         if (!isResizing) return;

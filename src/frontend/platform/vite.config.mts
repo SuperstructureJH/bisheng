@@ -4,6 +4,7 @@ import { defineConfig, loadEnv } from "vite";
 import { createHtmlPlugin } from 'vite-plugin-html';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import svgr from "vite-plugin-svgr";
+import { createFrontendPrototypeMockPlugin } from "../prototype/mockApiPlugin";
 // import { visualizer } from 'rollup-plugin-visualizer';
 
 /**
@@ -131,6 +132,7 @@ export default defineConfig(({ command, mode }) => {
       }
     },
     plugins: [
+      env.VITE_MOCK_MODE === "true" && createFrontendPrototypeMockPlugin({ app: "platform" }),
       react(),
       svgr(),
       createHtmlPlugin({

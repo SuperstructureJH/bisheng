@@ -44,6 +44,8 @@ export type User = {
     has_admin_console?: boolean;
     /** ``platform`` | ``workspace`` — post-login default when both → platform. */
     default_entry?: string;
+    /** Current account's desktop font-size preference, internal level 1–7. */
+    font_scale_level?: number;
 };
 
 export type ROLE = {

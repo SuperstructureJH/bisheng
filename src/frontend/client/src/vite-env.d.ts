@@ -48,5 +48,7 @@ interface Window {
   APP_CONFIG?: {
     /** Hide Japanese from the language switcher and locale auto-detection. */
     disableJa?: boolean;
+    /** Standard uses a 7-step slider; COFCO uses the 1/3/5 three-size mapping. */
+    fontSizeVariant?: 'standard' | 'cofco';
   };
 }

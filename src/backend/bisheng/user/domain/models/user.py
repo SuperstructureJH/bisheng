@@ -104,6 +104,7 @@ class User(UserBase, table=True):
 class UserRead(UserBase):
     user_id: int | None = None
     role: str | None = None  # admin；非超管时由服务端序列化（见 /user/info）
+    font_scale_level: int = 3
     access_token: str | None = None
     web_menu: list[str] | None = None
     # Legacy union flag (workbench OR admin), kept for back-compat clients.

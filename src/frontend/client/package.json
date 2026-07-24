@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "check-imports": "node scripts/check-case-sensitive-imports.mjs",
+    "prototype": "cross-env VITE_MOCK_MODE=true NODE_ENV=development vite --host 127.0.0.1",
     "dev": "cross-env NODE_ENV=development vite",
     "dev:docs": "rspress dev",
     "build:docs": "rspress build",

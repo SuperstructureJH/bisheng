@@ -39,9 +39,12 @@ from ...common.schemas.telemetry.event_data_schema import UserLoginEventData
 from ...common.services import telemetry_service
 from ...core.logger import trace_id_var
 from ..domain.models.user import User, UserCreate, UserDao, UserLogin, UserUpdate
+from ..domain.models.user_preference import FontScalePreferenceUpdate
 from ..domain.models.user_role import UserRole, UserRoleCreate, UserRoleDao
 from ..domain.services.auth import AuthJwt, LoginUser
 from ..domain.services.user import UserService
+from ..domain.services.user_preference_service import UserPreferenceService
+from .dependencies import get_user_preference_service
 
 # build router
 router = APIRouter(prefix="", tags=["User"])
@@ -172,7 +175,12 @@ async def get_admins(login_user: LoginUser = Depends(LoginUser.get_login_user)):
 
 
 @router.get("/user/info")
-async def get_info(login_user: LoginUser = Depends(LoginUser.get_login_user)):
+async def get_info(
+    login_user: LoginUser = Depends(LoginUser.get_login_user),
+    preference_service: UserPreferenceService = Depends(
+        get_user_preference_service
+    ),
+):
     user_id = login_user.user_id
     db_user = await UserDao.aget_user(user_id)
     if not db_user:
@@ -237,6 +245,7 @@ async def get_info(login_user: LoginUser = Depends(LoginUser.get_login_user)):
         role_ids=role_ids,
         is_department_admin=is_department_admin,
     )
+    font_scale_level = await preference_service.get_font_scale_level(user_id)
     return resp_200(
         await UserService.build_user_read(
             db_user,
@@ -252,9 +261,25 @@ async def get_info(login_user: LoginUser = Depends(LoginUser.get_login_user)):
             is_child_admin=is_child_admin,
             leaf_tenant_id=leaf_tenant_id,
             leaf_tenant_name=leaf_tenant_name,
+            font_scale_level=font_scale_level,
             **entry,
         )
     )
+
+
+@router.put("/user/preferences/font-size")
+async def update_font_size_preference(
+    data: FontScalePreferenceUpdate,
+    login_user: LoginUser = Depends(LoginUser.get_login_user),
+    preference_service: UserPreferenceService = Depends(
+        get_user_preference_service
+    ),
+):
+    preference = await preference_service.update_font_scale_level(
+        login_user.user_id,
+        data.level,
+    )
+    return resp_200(preference)
 
 
 @router.post("/user/logout", status_code=201)

@@ -61,7 +61,7 @@ async function _postTTS(url: string, formData: FormData, options?: AxiosRequestC
   return response.data;
 }
 
-async function _put(url: string, data?: any, options?: AxiosRequestConfig) {
+async function _put(url: string, data?: any, options?: AxiosRequestConfig & ErrorOptions) {
   const response = await customAxios.put(url, JSON.stringify(data), {
     ...options,
     headers: { 'Content-Type': 'application/json' },

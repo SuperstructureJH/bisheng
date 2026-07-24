@@ -140,6 +140,7 @@ export function getUser(): Promise<t.TUser> {
       is_department_admin,
       has_workbench: hbApi,
       has_admin_console: haApi,
+      font_scale_level,
     } = res.data;
     const wm = Array.isArray(web_menu) ? web_menu : [];
     const canWorkspace =
@@ -190,6 +191,7 @@ export function getUser(): Promise<t.TUser> {
       "menu_approval_mode_admin": Boolean(menu_approval_mode_admin ?? menu_approval_mode),
       has_workbench: canWorkspace,
       has_admin_console: canManagement,
+      "font_scale_level": font_scale_level,
       "termsAccepted": false,
       "backupCodes": [],
       "refreshToken": [],

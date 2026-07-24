@@ -23,6 +23,7 @@ import { TAuthConfig, TUserContext, TAuthContext, TResError } from '~/common';
 import useTimeout from './useTimeout';
 import store from '~/store';
 import { getPlatformAdminPanelUrl } from '~/utils/platformAdminUrl';
+import { applyFontScaleLevel } from '~/utils/fontScale';
 
 const AuthContext = createContext<TAuthContext | undefined>(undefined);
 
@@ -164,6 +165,7 @@ const AuthContextProvider = ({
 
   useEffect(() => {
     if (userQuery.data) {
+      applyFontScaleLevel(userQuery.data.font_scale_level, userQuery.data.id);
       setUser(userQuery.data);
       setIsAuthenticated(true);
       // Auth-state sentinel: stored in localStorage (shared across tabs)

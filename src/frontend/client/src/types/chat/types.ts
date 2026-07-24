@@ -126,6 +126,8 @@ export type TUser = {
   has_workbench?: boolean;
   /** /user/info：有效管理后台区域 */
   has_admin_console?: boolean;
+  /** Current account's desktop font-size preference, internal level 1–7. */
+  font_scale_level?: number;
   backupCodes?: TBackupCode[];
   createdAt: string;
   updatedAt: string;

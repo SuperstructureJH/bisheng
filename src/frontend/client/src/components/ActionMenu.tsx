@@ -22,7 +22,7 @@ export const actionMenuContentClassName = cn(
 );
 
 const itemBaseClassName =
-    "flex w-full cursor-pointer items-center gap-2 rounded-[6px] px-2 py-[5px] text-sm leading-[22px] outline-none transition-colors";
+    "flex min-h-[var(--bs-row-height)] w-full cursor-pointer items-center gap-2 rounded-[6px] px-2 text-[length:var(--bs-ui-font-size)] leading-[var(--bs-ui-line-height)] outline-none transition-colors";
 
 const itemRegularClassName = cn(
     itemBaseClassName,
@@ -34,11 +34,11 @@ const itemDangerClassName = cn(
     "text-[#F53F3F] data-[highlighted]:bg-[#F53F3F]/10 data-[highlighted]:text-[#F53F3F] focus:bg-[#F53F3F]/10 focus:text-[#F53F3F]",
 );
 
-const iconBaseClassName = "size-4 shrink-0";
+const iconBaseClassName = "bisheng-scalable-icon shrink-0";
 const iconRegularClassName = cn(iconBaseClassName, "text-[#4E5969]");
 const iconDangerClassName = cn(iconBaseClassName, "text-[#F53F3F]");
 
-const labelClassName = "min-w-0 truncate text-sm leading-[22px]";
+const labelClassName = "min-w-0 truncate text-[length:var(--bs-ui-font-size)] leading-[var(--bs-ui-line-height)]";
 
 /** Item-row style tokens, exported so non-DropdownMenuItem rows (e.g. a submenu
  *  trigger or a custom header) can match the same height / radius / typography. */

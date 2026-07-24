@@ -1,10 +1,11 @@
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight, Type } from "lucide-react";
 import { Outlined } from "bisheng-icons";
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import { useRecoilState } from "recoil";
 import { AccountInfoDialog } from "~/components/AccountInfoDialog";
 import { NotificationsDialog } from "~/components/NotificationsDialog";
 import { ApprovalCenterDialog } from "~/components/approval/ApprovalCenterDialog";
+import { FontSizeControl } from "~/components/FontSizeControl";
 import { Avatar, AvatarImage, AvatarName } from "~/components/ui/Avatar";
 import {
     DropdownMenu,
@@ -45,6 +46,7 @@ type ApprovalCenterTarget = {
 function UserPopMenuDrawer() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [langOpen, setLangOpen] = useState(false);
+    const [fontSizeOpen, setFontSizeOpen] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
 
     const { user, logout } = useAuthContext();
@@ -95,6 +97,7 @@ function UserPopMenuDrawer() {
     useEffect(() => {
         if (!menuOpen) {
             setLangOpen(false);
+            setFontSizeOpen(false);
             return;
         }
         void refreshCount();
@@ -247,6 +250,31 @@ function UserPopMenuDrawer() {
                                     </button>
                                 )}
                             </div>
+                        ) : null}
+                    </div>
+
+                    <div className="mt-0.5">
+                        <button
+                            type="button"
+                            className="flex min-h-[var(--bs-row-height)] w-full items-center justify-between rounded-xl px-3 text-left outline-none hover:bg-gray-50"
+                            onClick={() => {
+                                setFontSizeOpen((open) => !open);
+                                setLangOpen(false);
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Type className="bisheng-scalable-icon text-gray-600" aria-hidden />
+                                <span className="whitespace-nowrap text-[length:var(--bs-ui-font-size)] text-gray-700">
+                                    {localize("com_font_size")}
+                                </span>
+                            </div>
+                            <ChevronRight
+                                className={cn("size-4 shrink-0 text-gray-500 transition-transform", fontSizeOpen && "rotate-90")}
+                                aria-hidden
+                            />
+                        </button>
+                        {fontSizeOpen ? (
+                            <FontSizeControl className="mt-1 w-full border-l-2 border-gray-100" />
                         ) : null}
                     </div>
 
@@ -484,6 +512,18 @@ function UserPopMenuRail() {
                                     {langcode === 'ja' && <Check className="ml-2 size-4 text-blue-500" />}
                                 </ActionMenuItem>
                             )}
+                        </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+
+                    <DropdownMenuSub>
+                        <DropdownMenuSubTrigger className={cn(actionMenuItemClassName, "font-normal data-[state=open]:bg-[#f2f3f5]")}>
+                            <Type className={cn(actionMenuItemIconClassName, "bisheng-scalable-icon")} aria-hidden />
+                            <span className={cn(actionMenuLabelClassName, "flex-1")}>{localize('com_font_size')}</span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent
+                            className={cn(actionMenuSurfaceClassName, "z-[100] ml-2 min-w-[280px] gap-0 p-2")}
+                        >
+                            <FontSizeControl />
                         </DropdownMenuSubContent>
                     </DropdownMenuSub>
 

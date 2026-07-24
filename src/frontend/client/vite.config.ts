@@ -9,6 +9,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { VitePWA } from 'vite-plugin-pwa';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { createHtmlPlugin } from 'vite-plugin-html';
+import { createFrontendPrototypeMockPlugin } from '../prototype/mockApiPlugin';
 
 const app_env = {
   BASE_URL: '/workspace',
@@ -157,6 +158,7 @@ export default defineConfig(({ command, mode }) => {
     envDir: '../',
     envPrefix: ['VITE_', 'SCRIPT_', 'DOMAIN_', 'ALLOW_'],
     plugins: [
+      env.VITE_MOCK_MODE === 'true' && createFrontendPrototypeMockPlugin({ app: 'client' }),
       minioFileProxyPlugin(minioTarget),
       react(),
       nodePolyfills(),

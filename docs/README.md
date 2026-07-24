@@ -22,6 +22,7 @@
 
 | 目录 | 内容 |
 |------|------|
+| [`frontend-prototype-mode.md`](frontend-prototype-mode.md) | PRD 截图与交互评审用的双前端本地 mock 启动方式 |
 | [`api/`](api/) | 接口文档(filelib 纯检索、知识空间/知识库接口) |
 | [`PRD/`](PRD/) | 现行迭代的产品 PRD 与技术方案(按 `{版本} {主题} PRD/` 组织) |
 | [`observability/`](observability/) | BS_METRIC 指标日志契约(监控团队解析依据) |

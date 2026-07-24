@@ -7,6 +7,7 @@ import { delComponentApi, getComponents, overridComponent, saveComponent } from 
 import { getUserInfo, logoutApi } from "../controllers/API/user";
 import { captureAndAlertRequestErrorHoc, requestInterceptor } from "../controllers/request";
 import { User } from "../types/api/user";
+import { applyFontScaleLevel } from "../utils/fontScale";
 
 type userContextType = {
     user: any; // {} loading null login
@@ -129,6 +130,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
         // 获取用户信息
         getUserInfo().then(res => {
+            applyFontScaleLevel(res.font_scale_level, res.user_id)
             setUser(res.user_id ? res : null)
             const { user_id } = res;
             // Apply the same fallback that routes/index.tsx uses, so
