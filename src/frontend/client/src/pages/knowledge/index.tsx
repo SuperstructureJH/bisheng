@@ -48,7 +48,6 @@ import { KnowledgeSpaceShareDialog } from "./SpaceDetail/KnowledgeSpaceShareDial
 import { LoadingIcon } from "~/components/ui/icon/Loading";
 import { bishengConfState } from "~/pages/appChat/store/atoms";
 import { resolveUploadSizeLimits } from "./knowledgeUtils";
-import { FONT_SCALE_CHANGE_EVENT, readAppliedFontScaleLevel } from "~/utils/fontScale";
 
 export default function Knowledge() {
     const localize = useLocalize();
@@ -72,7 +71,6 @@ export default function Knowledge() {
     const [isDragging, setIsDragging] = useState(false);
     const [dragError, setDragError] = useState<string | null>(null);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const largeFontConstraintRef = useRef(false);
     const [spaceListDrawerOpen, setSpaceListDrawerOpen] = useState(false);
     // Mobile: a batch selection in the file list hides the AI dock and shows the action bar.
     const [fileSelectionActive, setFileSelectionActive] = useState(false);
@@ -173,25 +171,6 @@ export default function Knowledge() {
     useEffect(() => {
         if (!isH5 && !isDesktop) setSidebarCollapsed(true);
     }, [isH5, isDesktop]);
-
-    useEffect(() => {
-        if (isH5) return;
-        const applyLargeFontDefault = () => {
-            const constrained =
-                window.innerWidth <= 1024 && readAppliedFontScaleLevel() >= 5;
-            if (constrained && !largeFontConstraintRef.current) {
-                setSidebarCollapsed(true);
-            }
-            largeFontConstraintRef.current = constrained;
-        };
-        applyLargeFontDefault();
-        window.addEventListener("resize", applyLargeFontDefault);
-        window.addEventListener(FONT_SCALE_CHANGE_EVENT, applyLargeFontDefault);
-        return () => {
-            window.removeEventListener("resize", applyLargeFontDefault);
-            window.removeEventListener(FONT_SCALE_CHANGE_EVENT, applyLargeFontDefault);
-        };
-    }, [isH5]);
 
     useEffect(() => {
         if (showKnowledgeSquare) setSpaceListDrawerOpen(false);

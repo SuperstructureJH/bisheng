@@ -6,6 +6,7 @@ window.APP_CONFIG = {
     // Hide Japanese from the language switcher and prevent it from being
     // auto-selected by browser/locale detection. Set to false to re-enable.
     disableJa: true,
-    // "standard": 7-step slider; "cofco": Small / Standard / Large (levels 1/3/5).
-    fontSizeVariant: "standard"
+    // Disabled in the standard edition. Set to "cofco" only in the COFCO
+    // deployment to expose Small / Standard / Large display-size controls.
+    fontSizeVariant: "disabled"
 };

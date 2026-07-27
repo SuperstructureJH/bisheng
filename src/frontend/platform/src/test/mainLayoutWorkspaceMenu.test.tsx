@@ -157,6 +157,7 @@ function renderLayout(webMenu: string[]) {
 describe("MainLayout workspace entry", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    window.APP_CONFIG = { fontSizeVariant: "cofco" };
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: localStorageMock,
@@ -204,6 +205,16 @@ describe("MainLayout workspace entry", () => {
     expect(popover).toHaveAttribute("data-side", "left");
     expect(popover).toHaveClass("bisheng-font-size-popover");
     expect(screen.getByTestId("font-size-control")).toBeInTheDocument();
+  });
+
+  it("hides the font-size entry in the standard edition", () => {
+    window.APP_CONFIG = { fontSizeVariant: "disabled" };
+
+    renderLayout(["workstation"]);
+
+    expect(
+      screen.queryByRole("button", { name: "menu.fontSize" }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps admin navigation labels on the shared responsive layout contract", () => {

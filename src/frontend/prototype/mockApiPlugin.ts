@@ -305,10 +305,10 @@ function resolveMock(request: MockRequest): MockResponse {
   }
   if (method === "PUT" && pathname === "/api/v1/user/preferences/font-size") {
     const level = Number((body as { level?: unknown } | undefined)?.level);
-    if (!Number.isInteger(level) || level < 1 || level > 7) {
+    if (![1, 3, 5].includes(level)) {
       return {
         status: 422,
-        data: { detail: "font scale level must be between 1 and 7" },
+        data: { detail: "font scale level must be one of 1, 3, 5" },
       };
     }
     mockFontScaleLevel = level;

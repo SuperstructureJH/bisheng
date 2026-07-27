@@ -2,13 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
- * Account-level desktop font-size preference (F042).
- * These semantic tokens deliberately exclude media: avatar, logo, cover,
- * thumbnail and document images keep their intrinsic dimensions.
- * ============================================================ */
-:root,
-html[data-bisheng-font-scale="3"] {
+html[data-bisheng-display-scale] {
+  zoom: var(--bisheng-display-zoom, 1);
+}
+
+/* Shared baseline size tokens. COFCO display sizing uses whole-page zoom above. */
+:root {
   --bs-ui-font-size: 14px;
   --bs-ui-line-height: 22px;
   --bs-ui-title-font-size: 16px;
@@ -30,90 +29,6 @@ html[data-bisheng-font-scale="3"] {
   --bs-primary-sidebar-width: 64px;
   --bs-secondary-sidebar-width: 240px;
   --bs-legend-marker-size: 10px;
-}
-
-html[data-bisheng-font-scale="1"] {
-  --bs-ui-font-size: 12px; --bs-ui-line-height: 20px;
-  --bs-ui-title-font-size: 14px; --bs-ui-title-line-height: 22px;
-  --bs-aux-font-size: 12px; --bs-aux-line-height: 20px;
-  --bs-content-font-size: 14px; --bs-content-line-height: 24px;
-  --bs-content-h1-font-size: 24px; --bs-content-h1-line-height: 32px;
-  --bs-content-h2-font-size: 20px; --bs-content-h2-line-height: 28px;
-  --bs-function-icon-size: 14px; --bs-primary-icon-size: 18px;
-  --bs-icon-hit-size: 28px; --bs-row-height: 32px;
-  --bs-button-height: 28px; --bs-input-height: 36px;
-  --bs-primary-sidebar-width: 56px; --bs-secondary-sidebar-width: 224px;
-  --bs-legend-marker-size: 8px;
-}
-
-html[data-bisheng-font-scale="2"] {
-  --bs-ui-font-size: 13px; --bs-ui-line-height: 21px;
-  --bs-ui-title-font-size: 15px; --bs-ui-title-line-height: 23px;
-  --bs-aux-font-size: 12px; --bs-aux-line-height: 20px;
-  --bs-content-font-size: 15px; --bs-content-line-height: 26px;
-  --bs-content-h1-font-size: 26px; --bs-content-h1-line-height: 34px;
-  --bs-content-h2-font-size: 22px; --bs-content-h2-line-height: 30px;
-  --bs-function-icon-size: 15px; --bs-primary-icon-size: 19px;
-  --bs-icon-hit-size: 30px; --bs-row-height: 34px;
-  --bs-button-height: 30px; --bs-input-height: 38px;
-  --bs-primary-sidebar-width: 60px; --bs-secondary-sidebar-width: 232px;
-  --bs-legend-marker-size: 9px;
-}
-
-html[data-bisheng-font-scale="4"] {
-  --bs-ui-font-size: 15px; --bs-ui-line-height: 23px;
-  --bs-ui-title-font-size: 17px; --bs-ui-title-line-height: 25px;
-  --bs-aux-font-size: 13px; --bs-aux-line-height: 21px;
-  --bs-content-font-size: 17px; --bs-content-line-height: 29px;
-  --bs-content-h1-font-size: 30px; --bs-content-h1-line-height: 38px;
-  --bs-content-h2-font-size: 26px; --bs-content-h2-line-height: 34px;
-  --bs-function-icon-size: 17px; --bs-primary-icon-size: 21px;
-  --bs-icon-hit-size: 34px; --bs-row-height: 38px;
-  --bs-button-height: 34px; --bs-input-height: 42px;
-  --bs-primary-sidebar-width: 64px; --bs-secondary-sidebar-width: 248px;
-  --bs-legend-marker-size: 11px;
-}
-
-html[data-bisheng-font-scale="5"] {
-  --bs-ui-font-size: 16px; --bs-ui-line-height: 24px;
-  --bs-ui-title-font-size: 18px; --bs-ui-title-line-height: 26px;
-  --bs-aux-font-size: 14px; --bs-aux-line-height: 22px;
-  --bs-content-font-size: 18px; --bs-content-line-height: 30px;
-  --bs-content-h1-font-size: 32px; --bs-content-h1-line-height: 40px;
-  --bs-content-h2-font-size: 28px; --bs-content-h2-line-height: 36px;
-  --bs-function-icon-size: 18px; --bs-primary-icon-size: 22px;
-  --bs-icon-hit-size: 36px; --bs-row-height: 40px;
-  --bs-button-height: 36px; --bs-input-height: 44px;
-  --bs-primary-sidebar-width: 68px; --bs-secondary-sidebar-width: 256px;
-  --bs-legend-marker-size: 12px;
-}
-
-html[data-bisheng-font-scale="6"] {
-  --bs-ui-font-size: 17px; --bs-ui-line-height: 25px;
-  --bs-ui-title-font-size: 19px; --bs-ui-title-line-height: 27px;
-  --bs-aux-font-size: 15px; --bs-aux-line-height: 23px;
-  --bs-content-font-size: 19px; --bs-content-line-height: 31px;
-  --bs-content-h1-font-size: 34px; --bs-content-h1-line-height: 42px;
-  --bs-content-h2-font-size: 30px; --bs-content-h2-line-height: 38px;
-  --bs-function-icon-size: 19px; --bs-primary-icon-size: 23px;
-  --bs-icon-hit-size: 38px; --bs-row-height: 42px;
-  --bs-button-height: 38px; --bs-input-height: 46px;
-  --bs-primary-sidebar-width: 68px; --bs-secondary-sidebar-width: 264px;
-  --bs-legend-marker-size: 13px;
-}
-
-html[data-bisheng-font-scale="7"] {
-  --bs-ui-font-size: 18px; --bs-ui-line-height: 26px;
-  --bs-ui-title-font-size: 20px; --bs-ui-title-line-height: 28px;
-  --bs-aux-font-size: 16px; --bs-aux-line-height: 24px;
-  --bs-content-font-size: 20px; --bs-content-line-height: 32px;
-  --bs-content-h1-font-size: 36px; --bs-content-h1-line-height: 44px;
-  --bs-content-h2-font-size: 32px; --bs-content-h2-line-height: 40px;
-  --bs-function-icon-size: 20px; --bs-primary-icon-size: 24px;
-  --bs-icon-hit-size: 40px; --bs-row-height: 44px;
-  --bs-button-height: 40px; --bs-input-height: 48px;
-  --bs-primary-sidebar-width: 72px; --bs-secondary-sidebar-width: 272px;
-  --bs-legend-marker-size: 14px;
 }
 
 /* Custom Variables */
@@ -446,72 +361,6 @@ html {
 @media not ((hover: hover) and (pointer: fine)) {
   .theme-green .btn-brand-primary:not(:disabled):active {
     background-color: #12813b !important; /* active: deeper green on press */
-  }
-}
-
-@media (min-width: 768px) {
-  html[data-bisheng-font-scale] body {
-    font-size: var(--bs-ui-font-size);
-    line-height: var(--bs-ui-line-height);
-  }
-
-  html[data-bisheng-font-scale] .bisheng-primary-rail {
-    width: var(--bs-primary-sidebar-width);
-  }
-
-  html[data-bisheng-font-scale] .bisheng-scalable-icon {
-    width: var(--bs-function-icon-size) !important;
-    height: var(--bs-function-icon-size) !important;
-  }
-
-  html[data-bisheng-font-scale] .bisheng-primary-icon {
-    width: var(--bs-primary-icon-size) !important;
-    height: var(--bs-primary-icon-size) !important;
-  }
-
-  html[data-bisheng-font-scale] .bisheng-primary-nav-hit {
-    width: var(--bs-icon-hit-size) !important;
-    height: var(--bs-icon-hit-size) !important;
-    padding: 0 !important;
-  }
-
-  html[data-bisheng-font-scale] :where(.text-sm, [class~="text-[14px]"]) {
-    font-size: var(--bs-ui-font-size) !important;
-    line-height: var(--bs-ui-line-height) !important;
-  }
-
-  html[data-bisheng-font-scale] :where(.text-xs, [class~="text-[12px]"]) {
-    font-size: var(--bs-aux-font-size) !important;
-    line-height: var(--bs-aux-line-height) !important;
-  }
-
-  html[data-bisheng-font-scale] :where(.text-base, [class~="text-[16px]"]) {
-    font-size: var(--bs-ui-title-font-size) !important;
-    line-height: var(--bs-ui-title-line-height) !important;
-  }
-
-  html[data-bisheng-font-scale] :where(.markdown, .bs-mkdown, .message-content, .prose) {
-    font-size: var(--bs-content-font-size) !important;
-    line-height: var(--bs-content-line-height) !important;
-  }
-
-  html[data-bisheng-font-scale] :where(.markdown, .bs-mkdown, .message-content, .prose) h1 {
-    font-size: var(--bs-content-h1-font-size) !important;
-    line-height: var(--bs-content-h1-line-height) !important;
-  }
-
-  html[data-bisheng-font-scale] :where(.markdown, .bs-mkdown, .message-content, .prose) h2 {
-    font-size: var(--bs-content-h2-font-size) !important;
-    line-height: var(--bs-content-h2-line-height) !important;
-  }
-
-  html[data-bisheng-font-scale] :where(.markdown, .bs-mkdown, .message-content, .prose) :where(code, td, th, figcaption) {
-    font-size: max(12px, calc(var(--bs-content-font-size) * 0.875)) !important;
-  }
-
-  html[data-bisheng-font-scale] :where(input, textarea, select) {
-    font-size: var(--bs-ui-font-size);
-    line-height: var(--bs-ui-line-height);
   }
 }
 

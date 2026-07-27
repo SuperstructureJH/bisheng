@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, Field as PydanticField
+from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, Integer, text
 from sqlmodel import Field
 
@@ -9,8 +10,7 @@ from bisheng.core.database.dialect_helpers import UPDATE_TIME_SERVER_DEFAULT
 
 
 DEFAULT_FONT_SCALE_LEVEL = 3
-MIN_FONT_SCALE_LEVEL = 1
-MAX_FONT_SCALE_LEVEL = 7
+SUPPORTED_FONT_SCALE_LEVELS = (1, 3, 5)
 
 
 class UserPreference(SQLModelSerializable, table=True):
@@ -44,10 +44,7 @@ class UserPreference(SQLModelSerializable, table=True):
 
 
 class FontScalePreferenceUpdate(BaseModel):
-    level: int = PydanticField(
-        ge=MIN_FONT_SCALE_LEVEL,
-        le=MAX_FONT_SCALE_LEVEL,
-    )
+    level: Literal[1, 3, 5]
 
 
 class FontScalePreferenceRead(BaseModel):

@@ -14,7 +14,6 @@ import {
   useNavScrolling,
 } from '~/hooks';
 import { cn } from '~/utils';
-import { FONT_SCALE_CHANGE_EVENT, readAppliedFontScaleLevel } from '~/utils/fontScale';
 import AccountSettings from './AccountSettings';
 import NavToggle from './NavToggle';
 import NewChat from './NewChat';
@@ -30,7 +29,7 @@ const Nav = ({
   const localize = useLocalize();
   const { isAuthenticated } = useAuthContext();
 
-  const [navWidth, setNavWidth] = useState('var(--bs-secondary-sidebar-width)');
+  const [navWidth, setNavWidth] = useState('240px');
   const [isHovering, setIsHovering] = useState(false);
   const navPanelRef = useRef<HTMLDivElement>(null);
   const [navPanelRightPx, setNavPanelRightPx] = useState(0);
@@ -51,32 +50,9 @@ const Nav = ({
       // 移动端：与知识/订阅/应用中心侧栏统一 240px
       setNavWidth('240px');
     } else {
-      setNavWidth('var(--bs-secondary-sidebar-width)');
+      setNavWidth('240px');
     }
   }, [isSmallScreen]);
-
-  // F042: in a 1024px desktop window, large levels start with the secondary
-  // sidebar collapsed. This only reacts when entering the constrained state;
-  // users can still open the sidebar manually afterwards.
-  useEffect(() => {
-    if (isSmallScreen) return;
-    let constrained = false;
-    const syncResponsiveDefault = () => {
-      const nextConstrained =
-        window.innerWidth <= 1024 && readAppliedFontScaleLevel() >= 5;
-      if (nextConstrained && !constrained) {
-        setNavVisible(false);
-      }
-      constrained = nextConstrained;
-    };
-    syncResponsiveDefault();
-    window.addEventListener('resize', syncResponsiveDefault);
-    window.addEventListener(FONT_SCALE_CHANGE_EVENT, syncResponsiveDefault);
-    return () => {
-      window.removeEventListener('resize', syncResponsiveDefault);
-      window.removeEventListener(FONT_SCALE_CHANGE_EVENT, syncResponsiveDefault);
-    };
-  }, [isSmallScreen, setNavVisible]);
 
   // 折叠把手贴在会话列表右缘（分隔线右侧），需计入 MainLayout 窄轨 + main 内边距，故用测量值而非假定 left:0 + translateX
   useLayoutEffect(() => {
@@ -182,7 +158,7 @@ const Nav = ({
           transition: 'width 0.2s, visibility 0.2s',
         }}
       >
-        <div className="h-full w-[var(--bs-secondary-sidebar-width)] max-[767px]:w-full">
+        <div className="h-full w-[240px] max-[767px]:w-full">
           <div className="flex h-full min-h-0 flex-col">
             <div
               className={cn(

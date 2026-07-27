@@ -28,6 +28,7 @@ import { useNotificationCount } from "~/hooks/useNotificationCount";
 import { useNotificationsFromUrl } from "~/hooks/useNotificationsFromUrl";
 import store from "~/store";
 import { cn } from "~/utils";
+import { isFontSizeEnabled } from "~/utils/fontScale";
 
 /** 左侧窄栏仅头像 = PC；会话历史抽屉内整行 = 移动端，菜单内容与 PC 一致 */
 export type UserPopMenuVariant = "rail" | "drawer";
@@ -46,7 +47,6 @@ type ApprovalCenterTarget = {
 function UserPopMenuDrawer() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [langOpen, setLangOpen] = useState(false);
-    const [fontSizeOpen, setFontSizeOpen] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
 
     const { user, logout } = useAuthContext();
@@ -97,7 +97,6 @@ function UserPopMenuDrawer() {
     useEffect(() => {
         if (!menuOpen) {
             setLangOpen(false);
-            setFontSizeOpen(false);
             return;
         }
         void refreshCount();
@@ -253,32 +252,6 @@ function UserPopMenuDrawer() {
                         ) : null}
                     </div>
 
-                    <div className="mt-0.5">
-                        <button
-                            type="button"
-                            className="flex min-h-[var(--bs-row-height)] w-full items-center justify-between rounded-xl px-3 text-left outline-none hover:bg-gray-50"
-                            onClick={() => {
-                                setFontSizeOpen((open) => !open);
-                                setLangOpen(false);
-                            }}
-                        >
-                            <div className="flex items-center gap-3">
-                                <Type className="bisheng-scalable-icon text-gray-600" aria-hidden />
-                                <span className="whitespace-nowrap text-[length:var(--bs-ui-font-size)] text-gray-700">
-                                    {localize("com_font_size")}
-                                </span>
-                            </div>
-                            <ChevronRight
-                                className={cn("size-4 shrink-0 text-gray-500 transition-transform", fontSizeOpen && "rotate-90")}
-                                aria-hidden
-                            />
-                        </button>
-                        {fontSizeOpen ? (
-                            <FontSizeControl className="mt-1 w-full border-l-2 border-gray-100" />
-                        ) : null}
-                    </div>
-
-
                     <button
                         type="button"
                         className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-1.5 text-left outline-none transition-colors hover:bg-red-50 text-[#f53f3f]"
@@ -335,6 +308,7 @@ function UserPopMenuRail() {
     const { unreadCount, refreshCount } = useNotificationCount();
 
     const localize = useLocalize();
+    const fontSizeEnabled = isFontSizeEnabled();
     const [langcode, setLangcode] = useRecoilState(store.lang);
     const changeLang = (lang: string) => setLangcode(lang);
     const displayName = user?.username || "admin";
@@ -515,17 +489,19 @@ function UserPopMenuRail() {
                         </DropdownMenuSubContent>
                     </DropdownMenuSub>
 
-                    <DropdownMenuSub>
-                        <DropdownMenuSubTrigger className={cn(actionMenuItemClassName, "font-normal data-[state=open]:bg-[#f2f3f5]")}>
-                            <Type className={cn(actionMenuItemIconClassName, "bisheng-scalable-icon")} aria-hidden />
-                            <span className={cn(actionMenuLabelClassName, "flex-1")}>{localize('com_font_size')}</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent
-                            className={cn(actionMenuSurfaceClassName, "z-[100] ml-2 min-w-[280px] gap-0 p-2")}
-                        >
-                            <FontSizeControl />
-                        </DropdownMenuSubContent>
-                    </DropdownMenuSub>
+                    {fontSizeEnabled ? (
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className={cn(actionMenuItemClassName, "font-normal data-[state=open]:bg-[#f2f3f5]")}>
+                                <Type className={actionMenuItemIconClassName} aria-hidden />
+                                <span className={cn(actionMenuLabelClassName, "flex-1")}>{localize('com_font_size')}</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent
+                                className={cn(actionMenuSurfaceClassName, "z-[100] ml-2 min-w-[180px] gap-0 p-2")}
+                            >
+                                <FontSizeControl />
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                    ) : null}
 
                     <ActionMenuItem
                         danger

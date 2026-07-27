@@ -39,7 +39,7 @@ async def test_get_font_scale_level_returns_saved_value():
     )
     service = UserPreferenceService(repository)
 
-    assert await service.get_font_scale_level(7) == 6
+    assert await service.get_font_scale_level(7) == 5
 
 
 async def test_update_font_scale_level_persists_value():
@@ -53,8 +53,8 @@ async def test_update_font_scale_level_persists_value():
     assert repository.preference.font_scale_level == 5
 
 
-@pytest.mark.parametrize("level", [0, 8])
-async def test_update_font_scale_level_rejects_out_of_range(level: int):
+@pytest.mark.parametrize("level", [0, 2, 4, 6, 7, 8])
+async def test_update_font_scale_level_rejects_unsupported_level(level: int):
     service = UserPreferenceService(FakeUserPreferenceRepository())
 
     with pytest.raises(ValueError):
