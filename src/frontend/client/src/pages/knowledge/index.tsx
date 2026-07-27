@@ -19,6 +19,7 @@ import {
 } from "~/components/ui";
 import {
     KnowledgeSpace,
+    FileType,
     SpaceRole,
     VisibilityType,
     SpaceSortType,
@@ -48,10 +49,12 @@ import { KnowledgeSpaceShareDialog } from "./SpaceDetail/KnowledgeSpaceShareDial
 import { LoadingIcon } from "~/components/ui/icon/Loading";
 import { bishengConfState } from "~/pages/appChat/store/atoms";
 import { resolveUploadSizeLimits } from "./knowledgeUtils";
+import { knowledgeSelectedFilesState } from "./selectionStore";
 
 export default function Knowledge() {
     const localize = useLocalize();
     const bishengConfig = useRecoilValue(bishengConfState);
+    const selectedKnowledgeFileIds = useRecoilValue(knowledgeSelectedFilesState);
     const uploadSizeLimits = useMemo(
         () => resolveUploadSizeLimits(bishengConfig),
         [bishengConfig],
@@ -261,6 +264,28 @@ export default function Knowledge() {
         markPendingDeletion: fileManager.markPendingDeletion,
         clearPendingDeletion: fileManager.clearPendingDeletion,
     });
+
+    const selectedQuickQaContents = useMemo(() => {
+        const selectableItems = [
+            ...fileManager.files,
+            ...fileUpload.uploadingFiles,
+            ...(fileUpload.uploadingFolder ? [fileUpload.uploadingFolder] : []),
+        ];
+        const itemById = new Map(selectableItems.map((item) => [item.id, item]));
+        return Array.from(selectedKnowledgeFileIds)
+            .map((id) => itemById.get(id))
+            .filter((item): item is NonNullable<typeof item> => !!item)
+            .map((item) => ({
+                id: item.id,
+                name: item.name,
+                kind: item.type === FileType.FOLDER ? "folder" as const : "file" as const,
+            }));
+    }, [
+        fileManager.files,
+        fileUpload.uploadingFiles,
+        fileUpload.uploadingFolder,
+        selectedKnowledgeFileIds,
+    ]);
 
     // Share route: close drawer when leaving /knowledge/share/:spaceId
     useEffect(() => {
@@ -894,6 +919,7 @@ export default function Knowledge() {
                                 spaceId={String(activeSpace.id)}
                                 folderId={fileManager.currentFolderId}
                                 contextLabel={contextLabel}
+                                selectedContents={selectedQuickQaContents}
                             />
                         )}
                     </div>

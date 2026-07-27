@@ -41,6 +41,29 @@ export interface FolderChatTag {
     name: string;
 }
 
+/** A file or folder explicitly selected as the scope of a quick-Q&A request. */
+export interface FolderChatSelectedContent {
+    id: string;
+    name: string;
+    kind: "file" | "folder";
+}
+
+export function buildSelectedContentScope(
+    selectedContents?: FolderChatSelectedContent[] | null,
+): { file_ids?: number[]; folder_ids?: number[] } {
+    if (!selectedContents?.length) return {};
+    return {
+        file_ids: selectedContents
+            .filter((item) => item.kind === "file")
+            .map((item) => Number(item.id))
+            .filter(Number.isFinite),
+        folder_ids: selectedContents
+            .filter((item) => item.kind === "folder")
+            .map((item) => Number(item.id))
+            .filter(Number.isFinite),
+    };
+}
+
 /**
  * Hook for folder/space RAG chat.
  * @param spaceId  - Knowledge space ID; empty string disables the hook.
@@ -271,7 +294,11 @@ export default function useFolderChat(
 
     // --- Send a message ---
     const sendMessage = useCallback(
-        async (text: string, _files?: any[] | null, tag?: FolderChatTag) => {
+        async (
+            text: string,
+            selectedContents?: FolderChatSelectedContent[] | null,
+            tag?: FolderChatTag,
+        ) => {
             if (!text.trim() || isStreaming || !enabled) return;
 
             // If no active session, create one first
@@ -325,6 +352,7 @@ export default function useFolderChat(
                 query: text.trim(),
                 tags: tag ? [{ id: tag.id, name: tag.name }] : [],
                 model_id: String(chatModel.id || ""),
+                ...buildSelectedContentScope(selectedContents),
             };
 
             // Lock input immediately — don't wait for SSE open event
@@ -371,7 +399,10 @@ export default function useFolderChat(
 
     // --- Regenerate ---
     const regenerate = useCallback(
-        (parentMessageId: string) => {
+        (
+            parentMessageId: string,
+            selectedContents?: FolderChatSelectedContent[] | null,
+        ) => {
             if (isStreaming || !enabled || !activeChatId) return;
 
             const parentMsg = messagesRef.current.find(
@@ -398,6 +429,7 @@ export default function useFolderChat(
                 query: parentMsg.text?.trim() || "",
                 tags: [],
                 model_id: String(chatModel.id || ""),
+                ...buildSelectedContentScope(selectedContents),
             };
 
             setSseSubmission(buildSubmission(payload, newResponseId));

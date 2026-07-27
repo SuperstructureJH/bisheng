@@ -36,7 +36,7 @@ from bisheng.database.models.session import MessageSession, MessageSessionDao
 from bisheng.database.models.tag import TagBusinessTypeEnum, TagDao
 from bisheng.knowledge.domain.knowledge_rag import KnowledgeRag
 from bisheng.knowledge.domain.models.knowledge import KnowledgeDao, KnowledgeTypeEnum
-from bisheng.knowledge.domain.models.knowledge_file import KnowledgeFileDao
+from bisheng.knowledge.domain.models.knowledge_file import FileType, KnowledgeFileDao
 from bisheng.knowledge.domain.models.knowledge_space_file import SpaceFileDao
 from bisheng.knowledge.domain.services.knowledge_utils import KnowledgeUtils
 from bisheng.knowledge.rag.version_filter import build_primary_only_filter
@@ -699,6 +699,8 @@ class KnowledgeSpaceChatService:
         query: str,
         model_id: int,
         tags: list[dict] | None = None,
+        file_ids: list[int] | None = None,
+        folder_ids: list[int] | None = None,
     ) -> AsyncIterator[ChatResponse]:
         """Folder RAG query"""
         flow_id = self.generate_flow_id_for_folder(knowledge_id, folder_id)
@@ -714,16 +716,25 @@ class KnowledgeSpaceChatService:
         if not space:
             raise NotFoundError(msg="Knowledge space not found for chat")
 
-        target_file_ids = None
+        selected_scope = file_ids is not None or folder_ids is not None
+        target_file_ids = (
+            await self._resolve_selected_file_ids(
+                knowledge_id=knowledge_id,
+                file_ids=file_ids or [],
+                folder_ids=folder_ids or [],
+            )
+            if selected_scope
+            else None
+        )
 
-        if folder_id:
+        if not selected_scope and folder_id:
             file_record = await self._require_folder_view_permission(knowledge_id, folder_id)
             if not file_record or file_record.knowledge_id != knowledge_id or file_record.file_type != 0:
                 raise NotFoundError(msg="Invalid folder for chat")
             file_level_path = file_record.file_level_path + f"/{file_record.id}"
 
             folder_files = await SpaceFileDao.get_children_by_prefix(space.id, file_level_path)
-            target_file_ids = [one.id for one in folder_files]
+            target_file_ids = [one.id for one in folder_files if one.file_type == FileType.FILE.value]
 
         if tags:
             tag_file_ids = await TagDao.aget_resources_by_tags(
@@ -751,6 +762,47 @@ class KnowledgeSpaceChatService:
 
         async for one in self._render_rag_response(session, finally_docs, query, model_id, tags):
             yield one
+
+    async def _resolve_selected_file_ids(
+        self,
+        knowledge_id: int,
+        file_ids: list[int],
+        folder_ids: list[int],
+    ) -> list[int]:
+        """Resolve the explicit quick-Q&A selection to viewable document IDs.
+
+        A selected file contributes itself. A selected folder contributes all
+        descendant documents recursively. Permission and space-relation checks
+        are repeated server-side so callers cannot widen the scope by forging
+        IDs that were not selectable in the UI.
+        """
+        target_file_ids: set[int] = set()
+
+        for file_id in file_ids:
+            file_record = await self._require_file_view_permission(knowledge_id, file_id)
+            if (
+                not file_record
+                or file_record.knowledge_id != knowledge_id
+                or file_record.file_type != FileType.FILE.value
+            ):
+                raise NotFoundError(msg="Invalid file for chat")
+            target_file_ids.add(file_record.id)
+
+        for folder_id in folder_ids:
+            folder_record = await self._require_folder_view_permission(knowledge_id, folder_id)
+            if (
+                not folder_record
+                or folder_record.knowledge_id != knowledge_id
+                or folder_record.file_type != FileType.DIR.value
+            ):
+                raise NotFoundError(msg="Invalid folder for chat")
+            folder_path = f"{folder_record.file_level_path or ''}/{folder_record.id}"
+            descendants = await SpaceFileDao.get_children_by_prefix(knowledge_id, folder_path)
+            target_file_ids.update(
+                item.id for item in descendants if item.file_type == FileType.FILE.value
+            )
+
+        return sorted(target_file_ids)
 
     async def get_space_llm_config(self, model_id: int) -> tuple[BaseChatModel, KnowledgeSpaceConfig]:
         """

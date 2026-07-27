@@ -205,7 +205,7 @@ class TestKnowledgeSpaceChatPermissions:
         ), patch.object(
             chat_service, 'space_rag', _empty_space_rag,
         ):
-            result = [item async for item in chat_service.chat_single_file(1, 11, 'hi')]
+            result = [item async for item in chat_service.chat_single_file(1, 11, 'hi', 1)]
 
         assert result == []
         mock_require_view.assert_awaited_once_with(1, 11)
@@ -292,13 +292,141 @@ class TestKnowledgeSpaceChatPermissions:
             new_callable=AsyncMock,
             return_value=[],
         ), patch.object(
-            chat_service, 'space_rag', _empty_space_rag,
+            chat_service, '_retrieve_and_filter', new_callable=AsyncMock, return_value=[],
+        ), patch.object(
+            chat_service,
+            'get_space_llm_config',
+            new_callable=AsyncMock,
+            return_value=(None, SimpleNamespace(max_chunk_size=4)),
+        ), patch.object(
+            chat_service, '_render_rag_response', _empty_space_rag,
         ):
-            result = [item async for item in chat_service.chat_folder(1, 22, 'chat-1', 'hello')]
+            result = [item async for item in chat_service.chat_folder(1, 22, 'chat-1', 'hello', 1)]
 
         assert result == []
         mock_require_space.assert_awaited_once_with(1)
         mock_require_folder.assert_awaited_once_with(1, 22)
+
+    @pytest.mark.asyncio
+    async def test_selected_scope_expands_folders_to_descendant_files(self, chat_service):
+        direct_file = _make_file(file_id=11, knowledge_id=1)
+        folder = _make_file(
+            file_id=22,
+            knowledge_id=1,
+            file_type=FileType.DIR.value,
+            file_name='folder',
+        )
+        nested_file = _make_file(
+            file_id=33,
+            knowledge_id=1,
+            file_name='nested.txt',
+            file_level_path='/22',
+        )
+        nested_folder = _make_file(
+            file_id=44,
+            knowledge_id=1,
+            file_type=FileType.DIR.value,
+            file_name='nested-folder',
+            file_level_path='/22',
+        )
+
+        with patch.object(
+            chat_service,
+            '_require_file_view_permission',
+            new_callable=AsyncMock,
+            return_value=direct_file,
+        ) as mock_require_file, patch.object(
+            chat_service,
+            '_require_folder_view_permission',
+            new_callable=AsyncMock,
+            return_value=folder,
+        ) as mock_require_folder, patch(
+            'bisheng.knowledge.domain.services.knowledge_space_chat_service.SpaceFileDao.get_children_by_prefix',
+            new_callable=AsyncMock,
+            return_value=[nested_file, nested_folder],
+        ) as mock_get_children:
+            result = await chat_service._resolve_selected_file_ids(
+                knowledge_id=1,
+                file_ids=[11],
+                folder_ids=[22],
+            )
+
+        assert result == [11, 33]
+        mock_require_file.assert_awaited_once_with(1, 11)
+        mock_require_folder.assert_awaited_once_with(1, 22)
+        mock_get_children.assert_awaited_once_with(1, '/22')
+
+    @pytest.mark.asyncio
+    async def test_selected_scope_can_be_explicitly_empty(self, chat_service):
+        result = await chat_service._resolve_selected_file_ids(
+            knowledge_id=1,
+            file_ids=[],
+            folder_ids=[],
+        )
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_selected_scope_and_tags_are_intersected(self, chat_service):
+        space = _make_space(space_id=1)
+        session = [SimpleNamespace(chat_id='chat-1', flow_id='space_1_folder_0')]
+        tags = [{'id': 9, 'name': 'tag-9'}]
+
+        async def _empty_render(*args, **kwargs):
+            if False:
+                yield None
+
+        with patch.object(
+            chat_service, '_require_space_view_permission', new_callable=AsyncMock,
+        ), patch(
+            'bisheng.knowledge.domain.services.knowledge_space_chat_service.MessageSessionDao.afilter_session',
+            new_callable=AsyncMock,
+            return_value=session,
+        ), patch(
+            'bisheng.knowledge.domain.services.knowledge_space_chat_service.KnowledgeDao.aquery_by_id',
+            new_callable=AsyncMock,
+            return_value=space,
+        ), patch.object(
+            chat_service,
+            '_resolve_selected_file_ids',
+            new_callable=AsyncMock,
+            return_value=[11, 33],
+        ), patch(
+            'bisheng.knowledge.domain.services.knowledge_space_chat_service.TagDao.aget_resources_by_tags',
+            new_callable=AsyncMock,
+            return_value=[
+                SimpleNamespace(resource_id='33'),
+                SimpleNamespace(resource_id='44'),
+            ],
+        ), patch.object(
+            chat_service,
+            'get_space_llm_config',
+            new_callable=AsyncMock,
+            return_value=(None, SimpleNamespace(max_chunk_size=4)),
+        ), patch.object(
+            chat_service,
+            '_retrieve_and_filter',
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as mock_retrieve, patch.object(
+            chat_service, '_render_rag_response', _empty_render,
+        ):
+            result = [
+                item
+                async for item in chat_service.chat_folder(
+                    1,
+                    0,
+                    'chat-1',
+                    'hello',
+                    1,
+                    tags,
+                    [11, 33],
+                    [],
+                )
+            ]
+
+        assert result == []
+        assert mock_retrieve.await_args.kwargs['candidate_file_ids'] == [33]
 
     @pytest.mark.asyncio
     async def test_create_chat_folder_session_rejects_missing_space(self, chat_service):

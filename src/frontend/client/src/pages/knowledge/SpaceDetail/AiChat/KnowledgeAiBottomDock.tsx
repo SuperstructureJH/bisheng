@@ -22,7 +22,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Outlined } from "bisheng-icons";
 import { useQuery } from "@tanstack/react-query";
-import { useRecoilValue, useResetRecoilState } from "recoil";
+import { useRecoilState, useRecoilValue } from "recoil";
 import { knowledgeSelectedFilesState } from "../../selectionStore";
 import {
     Tooltip,
@@ -35,7 +35,10 @@ import { ArticleQAIllustration } from "~/components/illustrations";
 import { KnowledgeAiInput } from "./KnowledgeAiInput";
 import { ConversationHistory } from "./ConversationHistory";
 import useFolderChat from "~/hooks/useFolderChat";
-import type { FolderChatTag } from "~/hooks/useFolderChat";
+import type {
+    FolderChatSelectedContent,
+    FolderChatTag,
+} from "~/hooks/useFolderChat";
 import { getSpaceTagsApi } from "~/api/knowledge";
 import { useGetBsConfig } from "~/hooks/queries/endpoints/queries";
 import { useLocalize, usePrefersMobileLayout } from "~/hooks";
@@ -49,11 +52,14 @@ interface KnowledgeAiBottomDockProps {
     folderId?: string;
     /** Welcome text disambiguates space-wide vs folder-scoped Q&A. */
     contextLabel?: string;
+    /** Checked files/folders shown as the explicit quick-Q&A scope. */
+    selectedContents?: FolderChatSelectedContent[];
 }
 
 export function KnowledgeAiBottomDock({
     spaceId,
     folderId,
+    selectedContents = [],
 }: KnowledgeAiBottomDockProps) {
     const localize = useLocalize();
     const isH5 = usePrefersMobileLayout();
@@ -70,18 +76,19 @@ export function KnowledgeAiBottomDock({
      *  `keyboardVisible` flag so styling can hang off it later without coupling. */
     const [isActive, setIsActive] = useState(false);
 
-    // Clears the file-list selection (shared atom). File selection and AI Q&A are
-    // independent: focusing or sending in the input clears any lingering selection
-    // so the two never read as coupled.
-    const resetFileSelection = useResetRecoilState(knowledgeSelectedFilesState);
+    const [, setSelectedFileIds] = useRecoilState(knowledgeSelectedFilesState);
 
-    /** Input focus/blur. On focus we both mark the dock active and clear the file
-     *  selection; also drives the mobile keyboard-overlay flag. */
+    /** Input focus/blur also drives the mobile keyboard-overlay flag. */
     const handleInputFocusChange = (focused: boolean) => {
         setIsActive(focused);
         setKeyboardVisible(focused);
-        if (focused) resetFileSelection();
     };
+
+    // A selection belongs to the current location. Moving to another space/folder
+    // restores that location's default scope rather than carrying stale references.
+    useEffect(() => {
+        setSelectedFileIds(new Set());
+    }, [spaceId, folderId, setSelectedFileIds]);
 
     /** Visual viewport tracking — pins the mobile-expanded panel above the virtual
      *  keyboard. Mirrors `ArticleAiDock`. See that file for the full rationale. */
@@ -152,17 +159,19 @@ export function KnowledgeAiBottomDock({
         ? localize("com_knowledge.qa_current_folder")
         : localize("com_knowledge.qa_current_space");
 
-    const handleSend = (text: string, files?: any[] | null, tag?: FolderChatTag) => {
-        sendMessage(text, files, tag);
-        // Sending is an AI interaction — clear any file selection made while typing
-        // so selection never appears to feed the Q&A.
-        resetFileSelection();
+    const handleSend = (
+        text: string,
+        contents?: FolderChatSelectedContent[] | null,
+        tag?: FolderChatTag,
+    ) => {
+        sendMessage(text, contents, tag);
         // First send slides the panel up — the input itself stays put.
         if (!open) setOpen(true);
     };
 
     const handleNewChat = async () => {
-        await createSession();
+        const session = await createSession();
+        if (session) setSelectedFileIds(new Set());
     };
 
     // Collapsed-state expand button — restores the conversation that was open before
@@ -176,6 +185,7 @@ export function KnowledgeAiBottomDock({
 
     const handleHistorySelect = (chatId: string) => {
         switchSession(chatId);
+        setSelectedFileIds(new Set());
         setShowHistory(false);
     };
 
@@ -185,7 +195,8 @@ export function KnowledgeAiBottomDock({
 
     const handleHistoryNewChat = async () => {
         setShowHistory(false);
-        await createSession();
+        const session = await createSession();
+        if (session) setSelectedFileIds(new Set());
     };
 
     const handleHistoryCollapse = () => {
@@ -269,7 +280,9 @@ export function KnowledgeAiBottomDock({
                         emptyStateHint={folderQaHint}
                         emptyStateIllustration={<ArticleQAIllustration grey className="mx-auto block size-[80px]" />}
                         onPresetClick={() => { }}
-                        onRegenerate={regenerate}
+                        onRegenerate={(messageId) =>
+                            regenerate(messageId, selectedContents)
+                        }
                     />
                     <div
                         aria-hidden
@@ -294,6 +307,14 @@ export function KnowledgeAiBottomDock({
                         modelValue={chatModel.id}
                         isStreaming={isStreaming}
                         disabled={!bsConfig?.models?.length}
+                        selectedContents={selectedContents}
+                        onRemoveSelectedContent={(id) =>
+                            setSelectedFileIds((current) => {
+                                const next = new Set(current);
+                                next.delete(id);
+                                return next;
+                            })
+                        }
                         onSend={handleSend}
                         onStop={stopGenerating}
                         variant="box"
@@ -477,7 +498,9 @@ export function KnowledgeAiBottomDock({
                                     emptyStateHint={folderQaHint}
                                     emptyStateIllustration={<ArticleQAIllustration grey className="mx-auto block size-[80px]" />}
                                     onPresetClick={() => { }}
-                                    onRegenerate={regenerate}
+                                    onRegenerate={(messageId) =>
+                                        regenerate(messageId, selectedContents)
+                                    }
                                 />
                             </div>
                         </div>
@@ -491,6 +514,14 @@ export function KnowledgeAiBottomDock({
                         modelValue={chatModel.id}
                         isStreaming={isStreaming}
                         disabled={!bsConfig?.models?.length}
+                        selectedContents={selectedContents}
+                        onRemoveSelectedContent={(id) =>
+                            setSelectedFileIds((current) => {
+                                const next = new Set(current);
+                                next.delete(id);
+                                return next;
+                            })
+                        }
                         onSend={handleSend}
                         onStop={stopGenerating}
                         variant={open ? "line" : "box"}

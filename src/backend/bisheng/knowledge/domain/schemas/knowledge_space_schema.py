@@ -204,6 +204,14 @@ class ChatFolderReq(ChatReq):
     folder_id: int = Field(default=0, description="Folder ID")
     chat_id: str = Field(..., description="Chat ID")
     tags: list[dict] | None = Field(None, description="List of Tag info for filtering")
+    file_ids: list[int] | None = Field(
+        None,
+        description="Selected file IDs. When provided, Q&A is limited to selected content.",
+    )
+    folder_ids: list[int] | None = Field(
+        None,
+        description="Selected folder IDs. Descendant files are included recursively.",
+    )
 
 
 class SubscribeSpaceResp(BaseModel):

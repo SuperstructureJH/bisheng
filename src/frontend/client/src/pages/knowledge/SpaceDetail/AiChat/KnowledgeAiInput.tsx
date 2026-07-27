@@ -17,11 +17,15 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRecoilState } from "recoil";
+import { FileText, X } from "lucide-react";
 import { SendIcon } from "~/components/svg";
 import AiModelSelect from "~/components/Chat/AiModelSelect";
 import type { BsConfig } from "~/api/chatApi";
 import { TagPicker } from "./TagPicker";
-import type { FolderChatTag } from "~/hooks/useFolderChat";
+import type {
+    FolderChatSelectedContent,
+    FolderChatTag,
+} from "~/hooks/useFolderChat";
 import { useLocalize, usePrefersMobileLayout, useScrollRevealRef } from "~/hooks";
 import SpeechToTextComponent from "~/components/Voice/SpeechToText";
 import { useGetWorkbenchModelsQuery } from "~/hooks/queries/data-provider";
@@ -34,7 +38,13 @@ interface KnowledgeAiInputProps {
     modelValue?: number;
     isStreaming: boolean;
     disabled?: boolean;
-    onSend: (text: string, files?: any[] | null, tag?: FolderChatTag) => void;
+    selectedContents?: FolderChatSelectedContent[];
+    onRemoveSelectedContent?: (id: string) => void;
+    onSend: (
+        text: string,
+        selectedContents?: FolderChatSelectedContent[] | null,
+        tag?: FolderChatTag,
+    ) => void;
     onStop: () => void;
     /** Visual frame; see file header. Defaults to "box". */
     variant?: "box" | "line";
@@ -55,6 +65,8 @@ export function KnowledgeAiInput({
     modelValue = 0,
     isStreaming,
     disabled,
+    selectedContents = [],
+    onRemoveSelectedContent,
     onSend,
     onStop,
     variant = "box",
@@ -129,9 +141,10 @@ export function KnowledgeAiInput({
         if (inputText.trim()) setTagDeleteHighlight(false);
     }, [inputText]);
 
-    // 已选 tag 时仅用短文案；部分浏览器不会随 React placeholder 属性刷新，需同步到 DOM
-    const resolvedPlaceholder = selectedTag
-        ? localize("com_knowledge.ai_input_placeholder_short")
+    // The placeholder explains the active retrieval scope. Selecting a tag does
+    // not replace this scope hint because tags further narrow the same request.
+    const resolvedPlaceholder = selectedContents.length
+        ? localize("com_knowledge.ai_input_placeholder_selected")
         : localize("com_knowledge.ai_input_placeholder");
     useLayoutEffect(() => {
         const el = textareaRef.current;
@@ -204,13 +217,21 @@ export function KnowledgeAiInput({
     // Handle send
     const handleSend = useCallback(() => {
         if (isStreaming || disabled || !inputText.trim()) return;
-        onSend(inputText.trim(), null, selectedTag ?? undefined);
+        onSend(inputText.trim(), selectedContents, selectedTag ?? undefined);
         setInputText("");
         setSelectedTag(null);
         // Mobile: blur after sending so the keyboard dismisses and the grey overlay
         // (driven by focus → keyboardVisible) clears instead of lingering.
         if (isH5) textareaRef.current?.blur();
-    }, [isStreaming, disabled, inputText, selectedTag, onSend, isH5]);
+    }, [
+        isStreaming,
+        disabled,
+        inputText,
+        selectedContents,
+        selectedTag,
+        onSend,
+        isH5,
+    ]);
 
     // Handle keydown
     const handleKeyDown = useCallback(
@@ -317,11 +338,10 @@ export function KnowledgeAiInput({
     return (
         <div
             className={cn(
-                "relative flex w-full bg-white p-3",
+                "relative w-full bg-white p-3",
                 variant === "box"
                     ? "rounded-[20px] touch-mobile:rounded-2xl border border-[#E5E6EB] shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
                     : "border-t border-[#EBEBEB]",
-                stacked ? "flex-col gap-2" : "items-center gap-2",
             )}
         >
             {/* Tag picker — floats above the input as a popover so single-row height stays compact */}
@@ -338,65 +358,96 @@ export function KnowledgeAiInput({
                 </div>
             )}
 
-            {/* Single-row: model on the left, inline with the textarea. */}
-            {!stacked && <div className="shrink-0">{modelSelect}</div>}
-
-            {/* Textarea + tag badge. The badge overlays the first line; outer wrapper scrolls so the badge moves with text. */}
-            <div className={cn(stacked ? "w-full" : "min-w-0 flex-1")}>
-                <div ref={outerScrollRevealRef} className="max-h-48 overflow-y-auto overflow-x-hidden scrollbar-on-scroll">
-                    <div className="relative">
-                        {selectedTag && (
-                            <span
-                                ref={badgeRef}
-                                className={`absolute left-0 top-0 z-10 box-border inline-flex h-5 max-h-5 min-h-5 max-w-[min(240px,90%)] shrink-0 items-center rounded-[2px] px-0 text-xs font-medium leading-none ${TAG_TEXT_CLASS} select-none transition-[background-color,box-shadow] duration-150 ease-out`}
-                                style={{
-                                    boxSizing: "border-box",
-                                    backgroundColor: tagDeleteHighlight
-                                        ? "rgb(var(--brand-500)/0.28)"
-                                        : TAG_BG,
-                                    boxShadow: tagDeleteHighlight
-                                        ? "inset 0 0 0 1.5px rgb(var(--brand-500))"
-                                        : "inset 0 0 0 1.5px rgb(var(--brand-500)/0)",
-                                }}
-                                aria-selected={tagDeleteHighlight}
+            {selectedContents.length > 0 && (
+                <div
+                    className="mb-2 flex w-full gap-2 overflow-x-auto pb-0.5 scrollbar-on-scroll"
+                    data-testid="knowledge-selected-content-list"
+                >
+                    {selectedContents.map((item) => (
+                        <div
+                            key={item.id}
+                            className="flex h-9 w-[200px] shrink-0 items-center gap-2 rounded-lg border border-[#E5E6EB] bg-[#F7F8FA] px-3 text-sm text-[#212121]"
+                            title={item.name}
+                            data-testid={`knowledge-selected-content-${item.id}`}
+                        >
+                            <FileText className="size-4 shrink-0 text-[#86909C]" />
+                            <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                            <button
+                                type="button"
+                                className="inline-flex size-5 shrink-0 items-center justify-center rounded text-[#86909C] transition-colors hover:bg-[#E5E6EB] hover:text-[#4E5969]"
+                                aria-label={localize("com_knowledge.remove_selected_content", {
+                                    0: item.name,
+                                })}
+                                onClick={() => onRemoveSelectedContent?.(item.id)}
                             >
+                                <X className="size-3.5" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div className={cn("flex w-full", stacked ? "flex-col gap-2" : "items-center gap-2")}>
+                {/* Single-row: model on the left, inline with the textarea. */}
+                {!stacked && <div className="shrink-0">{modelSelect}</div>}
+
+                {/* Textarea + tag badge. The badge overlays the first line; outer wrapper scrolls so the badge moves with text. */}
+                <div className={cn(stacked ? "w-full" : "min-w-0 flex-1")}>
+                    <div ref={outerScrollRevealRef} className="max-h-48 overflow-y-auto overflow-x-hidden scrollbar-on-scroll">
+                        <div className="relative">
+                            {selectedTag && (
                                 <span
-                                    className={`min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap ${TAG_TEXT_CLASS}`}
+                                    ref={badgeRef}
+                                    className={`absolute left-0 top-0 z-10 box-border inline-flex h-5 max-h-5 min-h-5 max-w-[min(240px,90%)] shrink-0 items-center rounded-[2px] px-0 text-xs font-medium leading-none ${TAG_TEXT_CLASS} select-none transition-[background-color,box-shadow] duration-150 ease-out`}
+                                    style={{
+                                        boxSizing: "border-box",
+                                        backgroundColor: tagDeleteHighlight
+                                            ? "rgb(var(--brand-500)/0.28)"
+                                            : TAG_BG,
+                                        boxShadow: tagDeleteHighlight
+                                            ? "inset 0 0 0 1.5px rgb(var(--brand-500))"
+                                            : "inset 0 0 0 1.5px rgb(var(--brand-500)/0)",
+                                    }}
+                                    aria-selected={tagDeleteHighlight}
                                 >
-                                    #{selectedTag.name}
+                                    <span
+                                        className={`min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap ${TAG_TEXT_CLASS}`}
+                                    >
+                                        #{selectedTag.name}
+                                    </span>
                                 </span>
-                            </span>
-                        )}
-                        <textarea
-                            ref={textareaRef}
-                            value={inputText}
-                            onChange={handleInput}
-                            onKeyDown={handleKeyDown}
-                            onCompositionStart={() => {
-                                isComposingRef.current = true;
-                            }}
-                            onCompositionEnd={() => {
-                                isComposingRef.current = false;
-                            }}
-                            onFocus={() => onFocusChange?.(true)}
-                            onBlur={() => onFocusChange?.(false)}
-                            disabled={disabled || isStreaming}
-                            placeholder={resolvedPlaceholder}
-                            rows={1}
-                            className="block w-full min-h-5 resize-none overflow-hidden bg-transparent text-sm leading-5 text-text-primary outline-none placeholder-[#86909c]"
-                            style={{
-                                textIndent: selectedTag ? `${badgeIndentPx ?? 0}px` : undefined,
-                            }}
-                            data-testid="knowledge-ai-input"
-                        />
+                            )}
+                            <textarea
+                                ref={textareaRef}
+                                value={inputText}
+                                onChange={handleInput}
+                                onKeyDown={handleKeyDown}
+                                onCompositionStart={() => {
+                                    isComposingRef.current = true;
+                                }}
+                                onCompositionEnd={() => {
+                                    isComposingRef.current = false;
+                                }}
+                                onFocus={() => onFocusChange?.(true)}
+                                onBlur={() => onFocusChange?.(false)}
+                                disabled={disabled || isStreaming}
+                                placeholder={resolvedPlaceholder}
+                                rows={1}
+                                className="block w-full min-h-5 resize-none overflow-hidden bg-transparent text-sm leading-5 text-text-primary outline-none placeholder-[#86909c]"
+                                style={{
+                                    textIndent: selectedTag ? `${badgeIndentPx ?? 0}px` : undefined,
+                                }}
+                                data-testid="knowledge-ai-input"
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Controls. Single-row: mic + send pinned right. Stacked: model on the left, mic + send on the right. */}
-            <div className={cn("flex items-center", stacked ? "w-full justify-between" : "shrink-0")}>
-                {stacked && <div className="shrink-0">{modelSelect}</div>}
-                {sendControls}
+                {/* Controls. Single-row: mic + send pinned right. Stacked: model on the left, mic + send on the right. */}
+                <div className={cn("flex items-center", stacked ? "w-full justify-between" : "shrink-0")}>
+                    {stacked && <div className="shrink-0">{modelSelect}</div>}
+                    {sendControls}
+                </div>
             </div>
         </div>
     );
