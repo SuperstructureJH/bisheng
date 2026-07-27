@@ -1,6 +1,7 @@
 import { paramsSerializer } from ".";
 import { ROLE, User } from "../../types/api/user";
 import axios from "../request";
+import type { FontScaleLevel } from "../../utils/fontScale";
 
 // 获取 key
 export const getPublicKeyApi = async (): Promise<{ public_key: string }> => {
@@ -14,6 +15,16 @@ export const getCaptchaApi = (): Promise<any> => {
 // 校验登录
 export async function getUserInfo(): Promise<User> {
   return await axios.get(`/api/v1/user/info`);
+}
+// 保存当前账号的电脑端字体大小偏好
+export async function saveFontScalePreference(
+  level: FontScaleLevel
+): Promise<{ font_scale_level: FontScaleLevel }> {
+  return await axios.put(
+    `/api/v1/user/preferences/font-size`,
+    { level },
+    { silent: true }
+  );
 }
 // 退出登录
 export async function logoutApi() {

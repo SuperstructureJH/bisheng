@@ -135,6 +135,10 @@ export function FontSizeControl({ className }: { className?: string }) {
           )}
         />
       </Slider.Root>
+      <div className="mt-1 flex justify-between text-[length:var(--bs-aux-font-size)] leading-[var(--bs-aux-line-height)] text-[#86909c]">
+        <span>{localize('com_font_size_small')}</span>
+        <span>{localize('com_font_size_large')}</span>
+      </div>
     </div>
   );
 }

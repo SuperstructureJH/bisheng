@@ -14,11 +14,12 @@ import {
 import { LoadingIcon } from "@/components/bs-icons/loading";
 import { DatasetIcon } from "@/components/bs-icons/menu/dataset";
 import { DashboardIcon } from "@/components/bs-icons/menu/system";
+import { FontSizeControl } from "@/components/FontSizeControl";
 import { bsConfirm } from "@/components/bs-ui/alertDialog/useConfirm";
 import { SelectHover, SelectHoverItem } from "@/components/bs-ui/select/hover";
 import { locationContext } from "@/contexts/locationContext";
 import i18next from "i18next";
-import { Check, ChevronDown, GanttChartIcon, Lock, MoonStar, Sun } from "lucide-react";
+import { Check, ChevronDown, GanttChartIcon, Lock, MoonStar, Sun, Type } from "lucide-react";
 import { ApprovalMenuIcon } from "@/components/bs-icons/menu/approval";
 import { TenantMenuIcon } from "@/components/bs-icons/menu/tenant";
 import { Suspense, useContext, useEffect, useMemo, useState } from "react";
@@ -41,6 +42,7 @@ export default function MainLayout() {
     // 角色
     const { user, setUser } = useContext(userContext);
     const { language, languageNames, options, changLanguage, t } = useLanguage(user)
+    const [fontSizeOpen, setFontSizeOpen] = useState(false)
 
     const handleLogout = () => {
         bsConfirm({
@@ -171,6 +173,17 @@ export default function MainLayout() {
                             }>
                             {hasWorkbenchEntry && <SelectHoverItem onClick={() => window.open('/workspace/')}><GanttChartIcon className="w-4 h-4 mr-1" /><span>{t('menu.workspace')}</span></SelectHoverItem>}
                             <SelectHoverItem onClick={JumpResetPage}><Lock className="w-4 h-4 mr-1" /><span>{t('menu.changePwd')}</span></SelectHoverItem>
+                            <SelectHoverItem
+                                onClick={(event) => {
+                                    event.stopPropagation()
+                                    setFontSizeOpen((open) => !open)
+                                }}
+                            >
+                                <Type className="w-4 h-4 mr-1 bisheng-scalable-icon" />
+                                <span className="flex-1">{t('menu.fontSize')}</span>
+                                <ChevronDown className={`absolute right-2 w-4 h-4 transition-transform ${fontSizeOpen ? 'rotate-180' : ''}`} />
+                            </SelectHoverItem>
+                            {fontSizeOpen && <FontSizeControl className="border-t border-[#e5e6eb] dark:border-gray-700" />}
                             <SelectHoverItem onClick={handleLogout} className="text-[#f53f3f] hover:bg-red-50 dark:hover:bg-red-950/30 dark:text-[#f53f3f]"><QuitIcon className="w-4 h-4 mr-1" /><span>{t('menu.logout')}</span></SelectHoverItem>
                         </SelectHover>
                     </div>
