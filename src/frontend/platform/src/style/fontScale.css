@@ -12,6 +12,8 @@ html[data-bisheng-font-scale="3"] {
     --bs-icon-hit-size: 32px; --bs-row-height: 36px;
     --bs-button-height: 32px; --bs-input-height: 40px;
     --bs-primary-sidebar-width: 64px; --bs-secondary-sidebar-width: 240px;
+    --bs-admin-sidebar-width: 184px; --bs-admin-nav-row-height: 48px;
+    --bs-admin-nav-icon-size: 24px; --bs-model-settings-width: 720px;
     --bs-legend-marker-size: 10px;
 }
 
@@ -26,6 +28,8 @@ html[data-bisheng-font-scale="1"] {
     --bs-icon-hit-size: 28px; --bs-row-height: 32px;
     --bs-button-height: 28px; --bs-input-height: 36px;
     --bs-primary-sidebar-width: 56px; --bs-secondary-sidebar-width: 224px;
+    --bs-admin-sidebar-width: 184px; --bs-admin-nav-row-height: 48px;
+    --bs-admin-nav-icon-size: 20px; --bs-model-settings-width: 720px;
     --bs-legend-marker-size: 8px;
 }
 
@@ -40,6 +44,8 @@ html[data-bisheng-font-scale="2"] {
     --bs-icon-hit-size: 30px; --bs-row-height: 34px;
     --bs-button-height: 30px; --bs-input-height: 38px;
     --bs-primary-sidebar-width: 60px; --bs-secondary-sidebar-width: 232px;
+    --bs-admin-sidebar-width: 184px; --bs-admin-nav-row-height: 48px;
+    --bs-admin-nav-icon-size: 22px; --bs-model-settings-width: 720px;
     --bs-legend-marker-size: 9px;
 }
 
@@ -54,6 +60,8 @@ html[data-bisheng-font-scale="4"] {
     --bs-icon-hit-size: 34px; --bs-row-height: 38px;
     --bs-button-height: 34px; --bs-input-height: 42px;
     --bs-primary-sidebar-width: 64px; --bs-secondary-sidebar-width: 248px;
+    --bs-admin-sidebar-width: 192px; --bs-admin-nav-row-height: 50px;
+    --bs-admin-nav-icon-size: 24px; --bs-model-settings-width: 760px;
     --bs-legend-marker-size: 11px;
 }
 
@@ -68,6 +76,8 @@ html[data-bisheng-font-scale="5"] {
     --bs-icon-hit-size: 36px; --bs-row-height: 40px;
     --bs-button-height: 36px; --bs-input-height: 44px;
     --bs-primary-sidebar-width: 68px; --bs-secondary-sidebar-width: 256px;
+    --bs-admin-sidebar-width: 200px; --bs-admin-nav-row-height: 52px;
+    --bs-admin-nav-icon-size: 26px; --bs-model-settings-width: 800px;
     --bs-legend-marker-size: 12px;
 }
 
@@ -82,6 +92,8 @@ html[data-bisheng-font-scale="6"] {
     --bs-icon-hit-size: 38px; --bs-row-height: 42px;
     --bs-button-height: 38px; --bs-input-height: 46px;
     --bs-primary-sidebar-width: 68px; --bs-secondary-sidebar-width: 264px;
+    --bs-admin-sidebar-width: 208px; --bs-admin-nav-row-height: 54px;
+    --bs-admin-nav-icon-size: 26px; --bs-model-settings-width: 840px;
     --bs-legend-marker-size: 13px;
 }
 
@@ -96,7 +108,93 @@ html[data-bisheng-font-scale="7"] {
     --bs-icon-hit-size: 40px; --bs-row-height: 44px;
     --bs-button-height: 40px; --bs-input-height: 48px;
     --bs-primary-sidebar-width: 72px; --bs-secondary-sidebar-width: 272px;
+    --bs-admin-sidebar-width: 216px; --bs-admin-nav-row-height: 56px;
+    --bs-admin-nav-icon-size: 28px; --bs-model-settings-width: 880px;
     --bs-legend-marker-size: 14px;
+}
+
+.bisheng-admin-sidebar {
+    width: var(--bs-admin-sidebar-width);
+    min-width: var(--bs-admin-sidebar-width);
+    padding-inline: 12px;
+}
+
+.bisheng-admin-nav-item {
+    display: grid;
+    width: 100%;
+    min-height: var(--bs-admin-nav-row-height);
+    grid-template-columns: var(--bs-admin-nav-icon-size) minmax(0, 1fr);
+    align-items: center;
+    column-gap: 14px;
+    margin-bottom: 3.5px;
+    padding-inline: 24px;
+    border-radius: 8px;
+}
+
+.bisheng-admin-nav-icon {
+    width: var(--bs-admin-nav-icon-size);
+    height: var(--bs-admin-nav-icon-size);
+}
+
+.bisheng-admin-nav-label {
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--bs-ui-font-size);
+    line-height: var(--bs-ui-line-height);
+}
+
+.bisheng-model-settings-content {
+    width: 100%;
+    max-width: var(--bs-model-settings-width);
+}
+
+.bisheng-model-config-grid {
+    min-width: var(--bs-model-settings-width);
+    grid-template-columns:
+        1.2fr
+        0.85fr
+        1.3fr
+        minmax(72px, var(--bs-row-height))
+        minmax(116px, calc(var(--bs-ui-font-size) * 7.5))
+        36px;
+}
+
+.bisheng-font-size-popover {
+    position: absolute;
+    top: 0;
+    right: calc(100% + 8px);
+    z-index: 50;
+    width: 280px;
+    padding: 8px;
+    border: 1px solid #e5e6eb;
+    border-radius: 12px;
+    background: hsl(var(--popover));
+    box-shadow: 0 12px 32px rgb(31 35 41 / 16%);
+}
+
+.bisheng-font-size-popover-arrow {
+    position: absolute;
+    top: calc(var(--bs-ui-line-height) / 2);
+    right: -6px;
+    width: 12px;
+    height: 12px;
+    transform: rotate(45deg);
+    border-top: 1px solid #e5e6eb;
+    border-right: 1px solid #e5e6eb;
+    background: hsl(var(--popover));
+}
+
+.dark .bisheng-font-size-popover {
+    border-color: #374151;
+    background: #2a2b2e;
+}
+
+.dark .bisheng-font-size-popover-arrow {
+    border-color: #374151;
+    background: #2a2b2e;
 }
 
 @media (min-width: 768px) {

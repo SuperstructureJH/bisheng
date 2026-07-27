@@ -89,8 +89,8 @@ export const ModelManagement = forwardRef<HTMLDivElement[], ModelManagementProps
         // }, [models, llmOptions])
 
         return (
-            <div className="mt-2 border p-4 rounded-md bg-background">
-                <div className="grid mb-4 items-center" style={{ gridTemplateColumns: "1.2fr 0.85fr 1.3fr 72px 116px 36px" }}>
+            <div className="mt-2 overflow-x-auto rounded-md border bg-background p-4">
+                <div className="bisheng-model-config-grid mb-4 grid items-center">
                     <div className="">
                         <Label className="bisheng-label">{t('bench.model')}</Label>
                     </div>
@@ -116,8 +116,7 @@ export const ModelManagement = forwardRef<HTMLDivElement[], ModelManagementProps
                     <div
                         key={model.key}
                         ref={(el) => setItemRef(el, index)}
-                        className="grid items-center mb-4"
-                        style={{ gridTemplateColumns: "1.2fr 0.85fr 1.3fr 72px 116px 36px" }}
+                        className="bisheng-model-config-grid mb-4 grid items-center"
                     >
                         <div className="pr-2" id={model.id}>
                             {assistantLlmOptions.length > 0 ? (

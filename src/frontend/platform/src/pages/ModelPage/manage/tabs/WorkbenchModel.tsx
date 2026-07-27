@@ -226,7 +226,7 @@ export default function WorkbenchModel({ onBack }) {
     const inheritedFromRoot = !!linsightConfig?.inherited_from_root;
     const fallbackBlocked = !!linsightConfig?.fallback_blocked;
     return (
-        <div className="max-w-[720px] mx-auto gap-y-4 flex flex-col mt-16 relative">
+        <div className="bisheng-model-settings-content relative mx-auto mt-16 flex flex-col gap-y-4 px-4">
             <FallbackBlockedBanner visible={fallbackBlocked} />
             {inheritedFromRoot && (
                 <div className="-mb-2 text-xs text-muted-foreground flex items-center">

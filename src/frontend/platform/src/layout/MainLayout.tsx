@@ -36,6 +36,10 @@ import { getBrandAssetUrl } from "../utils/brand";
 import HeaderMenu from "./HeaderMenu";
 import { LicenseBanner } from "./LicenseBanner";
 
+const adminNavItemClassName = "navlink bisheng-admin-nav-item hover:bg-nav-hover";
+const adminNavIconClassName = "bisheng-admin-nav-icon";
+const adminNavLabelClassName = "bisheng-admin-nav-label";
+
 export default function MainLayout() {
     const { dark, setDark } = useContext(darkContext);
     const { appConfig } = useContext(locationContext)
@@ -196,11 +200,11 @@ export default function MainLayout() {
                                         aria-label={t('menu.fontSize')}
                                         data-testid="admin-font-size-popover"
                                         data-side="left"
-                                        className="absolute right-[calc(100%+8px)] top-0 z-50 w-[280px] rounded-xl border border-[#e5e6eb] bg-popover p-2 shadow-[0_12px_32px_rgba(31,35,41,0.16)] dark:border-gray-700 dark:bg-[#2A2B2E]"
+                                        className="bisheng-font-size-popover"
                                     >
                                         <span
                                             aria-hidden
-                                            className="absolute -right-1.5 top-3 size-3 rotate-45 border-r border-t border-[#e5e6eb] bg-popover dark:border-gray-700 dark:bg-[#2A2B2E]"
+                                            className="bisheng-font-size-popover-arrow"
                                         />
                                         <FontSizeControl />
                                     </div>
@@ -212,83 +216,83 @@ export default function MainLayout() {
                 </div>
             </div>
             <div className="flex flex-1 min-h-0">
-                <div className="relative z-10 bg-background-main h-full w-[184px] min-w-[184px] px-3  shadow-x1 flex justify-between text-center ">
-                    <nav className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: "calc(100vh - 64px - 90px - var(--license-banner-h, 0px))" }}>
+                <div className="bisheng-admin-sidebar relative z-10 flex h-full justify-between bg-background-main text-center shadow-x1">
+                    <nav className="w-full overflow-y-auto overflow-x-hidden" style={{ maxHeight: "calc(100vh - 64px - 90px - var(--license-banner-h, 0px))" }}>
                         {/* <NavLink to='/' className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
                             <ApplicationIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[48px] text-[14px] leading-[48px]">{t('menu.app')}</span>
                         </NavLink> */}
                         {
                             showAdminNav('board') && <>
-                                <NavLink to={isMenu('board') ? '/dashboard' : '/menu-pending?menu=board'} className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                    <DashboardIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[48px] text-[14px] leading-[48px]">{t('menu.dashboard')}</span>
+                                <NavLink to={isMenu('board') ? '/dashboard' : '/menu-pending?menu=board'} className={adminNavItemClassName}>
+                                    <DashboardIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.dashboard')}</span>
                                 </NavLink>
                             </>
                         }
                         {
                             (showAdminNav('build') || canManageWorkbenchConfig) &&
-                            <NavLink to={isMenu('build') ? '/build' : (canManageWorkbenchConfig ? '/build/client' : '/menu-pending?menu=build')} className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`} >
-                                <TechnologyIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[48px] text-[14px] leading-[48px]">{t('menu.skills')}</span>
+                            <NavLink to={isMenu('build') ? '/build' : (canManageWorkbenchConfig ? '/build/client' : '/menu-pending?menu=build')} className={adminNavItemClassName} >
+                                <TechnologyIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.skills')}</span>
                             </NavLink>
                         }
                         {
                             showAdminNav('knowledge') &&
-                            <NavLink to={isMenu('knowledge') ? '/filelib' : '/menu-pending?menu=knowledge'} className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                <KnowledgeIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[48px] text-[14px] leading-[48px]">{t('menu.knowledge')}</span>
+                            <NavLink to={isMenu('knowledge') ? '/filelib' : '/menu-pending?menu=knowledge'} className={adminNavItemClassName}>
+                                <KnowledgeIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.knowledge')}</span>
                             </NavLink>
                         }
                         {
                             isFullAdminShell && <>
-                                <NavLink to='/dataset' className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                    <DatasetIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[48px] text-[14px] leading-[48px]">{t('menu.dataset')}</span>
+                                <NavLink to='/dataset' className={adminNavItemClassName}>
+                                    <DatasetIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.dataset')}</span>
                                 </NavLink>
                             </>
                         }
                         {
                             showAdminNav('model') &&
-                            <NavLink to={isMenu('model') ? '/model' : '/menu-pending?menu=model'} className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                <ModelIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[48px] text-[14px] leading-[48px]">{t('menu.models')}</span>
+                            <NavLink to={isMenu('model') ? '/model' : '/menu-pending?menu=model'} className={adminNavItemClassName}>
+                                <ModelIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.models')}</span>
                             </NavLink>
                         }
                         {
                             showAdminNav('evaluation') &&
-                            <NavLink to={isMenu('evaluation') ? '/evaluation' : '/menu-pending?menu=evaluation'} className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                <EvaluatingIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[48px] text-[14px] leading-[48px]">{t('menu.evaluation')}</span>
+                            <NavLink to={isMenu('evaluation') ? '/evaluation' : '/menu-pending?menu=evaluation'} className={adminNavItemClassName}>
+                                <EvaluatingIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.evaluation')}</span>
                             </NavLink>
                         }
                         {
                             showAdminNav('mark_task') &&
-                            <NavLink to={isMenu('mark_task') ? '/label' : '/menu-pending?menu=mark_task'} className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                <LabelIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[48px] text-[14px] leading-[48px]">{t('menu.annotation')}</span>
+                            <NavLink to={isMenu('mark_task') ? '/label' : '/menu-pending?menu=mark_task'} className={adminNavItemClassName}>
+                                <LabelIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.annotation')}</span>
                             </NavLink>
                         }
                         {
                             showAdminNav('log') &&
-                            <NavLink to={isMenu('log') ? '/log' : '/menu-pending?menu=log'} className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                <LogIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[56px] text-[14px] leading-[48px]">{t('menu.log')}</span>
+                            <NavLink to={isMenu('log') ? '/log' : '/menu-pending?menu=log'} className={adminNavItemClassName}>
+                                <LogIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.log')}</span>
                             </NavLink>
                         }
                         {
                             showApprovalNav &&
-                            <NavLink to='/approval' className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                <ApprovalMenuIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[56px] text-[14px] leading-[48px]">{t('menu.approval')}</span>
+                            <NavLink to='/approval' className={adminNavItemClassName}>
+                                <ApprovalMenuIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.approval')}</span>
                             </NavLink>
                         }
                         {
                             showSystemNav && <>
-                                <NavLink to='/sys' className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                    <SystemIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[56px] text-[14px] leading-[48px]">{t('menu.system')}</span>
+                                <NavLink to='/sys' className={adminNavItemClassName}>
+                                    <SystemIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('menu.system')}</span>
                                 </NavLink>
                             </>
                         }
                         {
                             isSuperAdmin && appConfig.multiTenantEnabled && <>
-                                <NavLink to='/tenant' className={`navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]`}>
-                                    <TenantMenuIcon className="h-6 w-6 my-[12px]" /><span className="mx-[14px] max-w-[56px] text-[14px] leading-[48px]">{t('tenant.management')}</span>
+                                <NavLink to='/tenant' className={adminNavItemClassName}>
+                                    <TenantMenuIcon className={adminNavIconClassName} /><span className={adminNavLabelClassName}>{t('tenant.management')}</span>
                                 </NavLink>
                             </>
                         }
                     </nav>
-                    {!appConfig.noFace && <div className="absolute left-0 bottom-0 w-[180px] p-2">
+                    {!appConfig.noFace && <div className="absolute bottom-0 left-0 w-[var(--bs-admin-sidebar-width)] p-2">
                         <div className="help flex items-between my-3">
                             <TooltipProvider>
                                 <Tooltip>
@@ -316,7 +320,7 @@ export default function MainLayout() {
                         </div>
                     </div>}
                 </div>
-                <div className="flex-1 bg-background-main-content rounded-lg w-[calc(100vw-184px)]">
+                <div className="min-w-0 flex-1 rounded-lg bg-background-main-content">
                     <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingIcon /></div>}>
                         <Outlet />
                     </Suspense>

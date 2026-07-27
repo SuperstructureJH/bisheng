@@ -136,13 +136,15 @@ export default function SystemModelConfig({
                     }}
                     className="flex flex-col"
                 >
-                    <TabsList className="w-[550px] m-auto">
-                        <TabsTrigger value="workbench" className="w-[150px]">{t('model.workModel')}</TabsTrigger>
-                        <TabsTrigger value="knowledge" className="w-[150px]">{t('model.knowledgeBaseModel')}</TabsTrigger>
-                        <TabsTrigger value="assis" className="w-[150px]">{t('model.assistantModel')}</TabsTrigger>
-                        <TabsTrigger value="evaluation" className="w-[150px]">{t('model.evaluationModel')}</TabsTrigger>
-                        <TabsTrigger value="workflow" className="w-[150px]">{t('model.workflowModel')}</TabsTrigger>
-                    </TabsList>
+                    <div className="max-w-full overflow-x-auto pb-1">
+                        <TabsList className="m-auto flex h-auto w-max min-w-max">
+                            <TabsTrigger value="workbench" className="min-w-[150px] flex-none">{t('model.workModel')}</TabsTrigger>
+                            <TabsTrigger value="knowledge" className="min-w-[150px] flex-none">{t('model.knowledgeBaseModel')}</TabsTrigger>
+                            <TabsTrigger value="assis" className="min-w-[150px] flex-none">{t('model.assistantModel')}</TabsTrigger>
+                            <TabsTrigger value="evaluation" className="min-w-[150px] flex-none">{t('model.evaluationModel')}</TabsTrigger>
+                            <TabsTrigger value="workflow" className="min-w-[150px] flex-none">{t('model.workflowModel')}</TabsTrigger>
+                        </TabsList>
+                    </div>
                      <TabsContent value="workbench">
                         <WorkbenchModel llmOptions={llmOptions} embeddings={embeddings} asrModel={asrModel} ttsModel={ttsModel} onBack={onBack}></WorkbenchModel>
                     </TabsContent>

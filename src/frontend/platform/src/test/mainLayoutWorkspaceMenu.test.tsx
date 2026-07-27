@@ -202,7 +202,15 @@ describe("MainLayout workspace entry", () => {
 
     const popover = screen.getByTestId("admin-font-size-popover");
     expect(popover).toHaveAttribute("data-side", "left");
-    expect(popover).toHaveClass("absolute");
+    expect(popover).toHaveClass("bisheng-font-size-popover");
     expect(screen.getByTestId("font-size-control")).toBeInTheDocument();
+  });
+
+  it("keeps admin navigation labels on the shared responsive layout contract", () => {
+    renderLayout(["model"]);
+
+    const modelLink = screen.getByRole("link", { name: "menu.models" });
+    expect(modelLink).toHaveClass("bisheng-admin-nav-item");
+    expect(screen.getByText("menu.models")).toHaveClass("bisheng-admin-nav-label");
   });
 });
