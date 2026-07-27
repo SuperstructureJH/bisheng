@@ -434,8 +434,8 @@ export default function MainLayout() {
   return (
     <div
       className={cn(
-        'relative flex w-screen bg-[#F8F8F8]',
-        isMobile ? 'min-h-[100dvh] overflow-x-clip' : 'h-[100dvh] overflow-hidden',
+        'bisheng-display-viewport relative flex w-full bg-[#F8F8F8]',
+        isMobile ? 'min-h-[100dvh] overflow-x-clip' : 'h-full overflow-hidden',
       )}
     >
       <WorkbenchAccessGuard />
@@ -480,7 +480,7 @@ export default function MainLayout() {
       <main
         className={cn(
           'relative min-w-0 flex-1',
-          isMobile ? 'min-h-[100dvh]' : 'h-[100dvh] py-2 pr-2',
+          isMobile ? 'min-h-[100dvh]' : 'h-full py-2 pr-2',
           shouldHideSidebarOnMobileAppsArea && 'transition-transform duration-300 ease-out',
           systemMenuRevealing && 'translate-x-16',
         )}

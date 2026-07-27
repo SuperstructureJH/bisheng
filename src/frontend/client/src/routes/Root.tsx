@@ -73,7 +73,7 @@ export default function Root() {
                   'flex flex-col overflow-hidden min-w-0',
                   isSmallScreen
                     ? 'h-[100dvh] max-h-[100dvh]'
-                    : 'h-[calc(100dvh-16px)] max-h-[calc(100dvh-16px)]',
+                    : 'h-full max-h-full',
                 )}
               >
                 <Banner onHeightChange={setBannerHeight} />

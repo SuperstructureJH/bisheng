@@ -120,8 +120,8 @@ export default function MainLayout() {
     const showAdminNav = (menu: string) =>
         isMenu(menu) || (menuApprovalMode && hasAdminEntry && APPROVAL_MENUS.has(menu))
 
-    return <div className="flex">
-        <div className="bg-background-main w-full h-screen flex flex-col">
+    return <div className="flex h-full w-full">
+        <div className="bisheng-display-viewport bg-background-main w-full h-full flex flex-col">
             {isSuperAdmin && <LicenseBanner />}
             <div className="flex justify-between h-[64px] shrink-0 bg-background-main relative z-[21]">
                 <div className="flex h-9 my-[14px]">

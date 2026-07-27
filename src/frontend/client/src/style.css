@@ -3,10 +3,26 @@
 @tailwind utilities;
 
 html[data-bisheng-display-scale] {
-  zoom: var(--bisheng-display-zoom, 1);
+  overflow: hidden;
 }
 
-/* Shared baseline size tokens. COFCO display sizing uses whole-page zoom above. */
+html[data-bisheng-display-scale] body {
+  width: var(--bisheng-display-viewport-width, 100vw);
+  height: var(--bisheng-display-viewport-height, 100dvh) !important;
+  overflow: hidden;
+  transform: scale(var(--bisheng-display-scale, 1));
+  transform-origin: top left;
+}
+
+html[data-bisheng-display-scale] #root,
+html[data-bisheng-display-scale] .bisheng-display-viewport {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Shared baseline size tokens. COFCO display sizing uses the application layer above. */
 :root {
   --bs-ui-font-size: 14px;
   --bs-ui-line-height: 22px;

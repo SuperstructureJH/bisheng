@@ -224,4 +224,13 @@ describe("MainLayout workspace entry", () => {
     expect(modelLink).toHaveClass("bisheng-admin-nav-item");
     expect(screen.getByText("menu.models")).toHaveClass("bisheng-admin-nav-label");
   });
+
+  it("inherits the compensated application viewport instead of raw screen units", () => {
+    const { container } = renderLayout(["model"]);
+
+    const viewport = container.querySelector(".bisheng-display-viewport");
+    expect(viewport).toHaveClass("h-full");
+    expect(viewport).not.toHaveClass("h-screen");
+    expect(viewport?.parentElement).toHaveClass("h-full", "w-full");
+  });
 });

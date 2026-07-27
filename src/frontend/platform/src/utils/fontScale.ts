@@ -7,6 +7,14 @@ export const DISPLAY_SCALE_BY_LEVEL: Record<FontScaleLevel, number> = {
     3: 1,
     5: 1.1,
 };
+export const DISPLAY_VIEWPORT_BY_LEVEL: Record<
+    FontScaleLevel,
+    { width: string; height: string }
+> = {
+    1: { width: "111.111111vw", height: "111.111111dvh" },
+    3: { width: "100vw", height: "100dvh" },
+    5: { width: "90.909091vw", height: "90.909091dvh" },
+};
 
 export function normalizeFontScaleLevel(value: unknown): FontScaleLevel {
     const level = Number(value);
@@ -23,16 +31,23 @@ export function applyFontScaleLevel(value: unknown, userId?: string | number): F
         document.documentElement.removeAttribute("data-bisheng-font-scale");
         document.documentElement.removeAttribute("data-bisheng-display-scale");
         document.documentElement.style.removeProperty("--bisheng-display-zoom");
+        document.documentElement.style.removeProperty("--bisheng-display-scale");
+        document.documentElement.style.removeProperty("--bisheng-display-viewport-width");
+        document.documentElement.style.removeProperty("--bisheng-display-viewport-height");
         return DEFAULT_FONT_SCALE_LEVEL;
     }
 
     const level = normalizeFontScaleLevel(value);
+    const viewport = DISPLAY_VIEWPORT_BY_LEVEL[level];
     document.documentElement.removeAttribute("data-bisheng-font-scale");
     document.documentElement.dataset.bishengDisplayScale = String(level);
+    document.documentElement.style.removeProperty("--bisheng-display-zoom");
     document.documentElement.style.setProperty(
-        "--bisheng-display-zoom",
+        "--bisheng-display-scale",
         String(DISPLAY_SCALE_BY_LEVEL[level])
     );
+    document.documentElement.style.setProperty("--bisheng-display-viewport-width", viewport.width);
+    document.documentElement.style.setProperty("--bisheng-display-viewport-height", viewport.height);
     if (userId !== undefined && userId !== null && String(userId)) {
         try {
             localStorage.setItem(`bisheng:font-scale:${userId}`, String(level));
