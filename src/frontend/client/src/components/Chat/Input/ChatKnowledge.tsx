@@ -31,6 +31,11 @@ import { BsConfig } from "~/types/chat";
 import { useLocalize, useMediaQuery, useScrollRevealRef } from "~/hooks";
 import { useToastContext } from "~/Providers";
 import { cn } from "~/utils";
+import {
+  filterKnowledgeSpaceGroups,
+  groupKnowledgeSpaces,
+  type KnowledgeSpaceGroup,
+} from "./knowledgeSpaceGrouping";
 
 // --- 类型定义 ---
 export type KnowledgeType = 'org' | 'space';
@@ -173,6 +178,7 @@ const KnowledgeListPanel = ({
   hasMore,
   onLoadMore,
   emptyText,
+  sections,
 }: {
   placeholder: string;
   keyword: string;
@@ -184,6 +190,7 @@ const KnowledgeListPanel = ({
   hasMore: boolean;
   onLoadMore: () => void;
   emptyText: string;
+  sections?: Array<KnowledgeSpaceGroup<any> & { label: string }>;
 }) => {
   const listScrollRevealRef = useScrollRevealRef<HTMLDivElement>();
   // Direct ref to the scroll container so we can read scroll metrics for the
@@ -209,9 +216,12 @@ const KnowledgeListPanel = ({
     setCanScrollUp(scrollTop > 0);
     setCanScrollDown(scrollTop + clientHeight < scrollHeight - 1);
   }, []);
+  const itemCount = sections
+    ? sections.reduce((count, section) => count + section.items.length, 0)
+    : items.length;
   useEffect(() => {
     updateScrollIndicators();
-  }, [items, updateScrollIndicators]);
+  }, [itemCount, updateScrollIndicators]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -219,6 +229,33 @@ const KnowledgeListPanel = ({
       onLoadMore();
     }
     updateScrollIndicators();
+  };
+
+  const renderItem = (item: any) => {
+    // Coerce both sides to string: API list ids can be numeric while selected
+    // items are normalized to strings.
+    const isChecked = selectedItems.some(
+      (selected) => String(selected.id) === String(item.id),
+    );
+    return (
+      <DropdownMenuItem
+        key={item.id}
+        onSelect={(e) => {
+          e.preventDefault();
+          onToggle(item);
+        }}
+        className="flex items-center gap-2 px-2 py-[5px] cursor-pointer rounded-[6px] data-[highlighted]:bg-[#f2f3f5] focus:bg-[#f2f3f5] outline-none transition-colors"
+      >
+        <Checkbox
+          checked={isChecked}
+          tabIndex={-1}
+          className="pointer-events-none shrink-0 border-[#D9D9D9] data-[state=checked]:border-primary data-[state=indeterminate]:border-primary"
+        />
+        <span className="truncate flex-1 text-[14px] text-slate-700 leading-[22px]">
+          {item.name}
+        </span>
+      </DropdownMenuItem>
+    );
   };
 
   return (
@@ -263,40 +300,30 @@ const KnowledgeListPanel = ({
           className="overflow-y-auto flex flex-col gap-0 scrollbar-on-scroll min-h-0 flex-1 pb-2"
           onScroll={handleScroll}
         >
-        {items.map((item) => {
-          // 判断是否选中 — coerce both sides to string: list items arrive from
-          // API as numeric ids, while selected items may be strings (defaults
-          // seeded via `String(k.id)` or restored from localStorage).
-          const isChecked = selectedItems.some((s) => String(s.id) === String(item.id));
-          return (
-            <DropdownMenuItem
-              key={item.id}
-              onSelect={(e) => {
-                e.preventDefault();
-                onToggle(item);
-              }}
-              className="flex items-center gap-2 px-2 py-[5px] cursor-pointer rounded-[6px] data-[highlighted]:bg-[#f2f3f5] focus:bg-[#f2f3f5] outline-none transition-colors"
-            >
-              <Checkbox
-                checked={isChecked}
-                tabIndex={-1}
-                className="pointer-events-none shrink-0 border-[#D9D9D9] data-[state=checked]:border-primary data-[state=indeterminate]:border-primary"
-              />
-              <span className="truncate flex-1 text-[14px] text-slate-700 leading-[22px]">
-                {item.name}
-              </span>
-            </DropdownMenuItem>
-          );
-        })}
+          {itemCount > 0 && sections
+            ? sections.map((section) => (
+              <div
+                key={section.key}
+                data-knowledge-space-group={section.key}
+              >
+                <div className="px-2 pb-1 pt-2 text-[12px] leading-[18px] text-[#999999]">
+                  {section.label}
+                </div>
+                {section.items.map(renderItem)}
+              </div>
+            ))
+            : items.map(renderItem)}
 
-        {isFetching && (
-          <div className="flex justify-center py-3">
-            <Loader2 size={16} className="animate-spin text-slate-300" />
-          </div>
-        )}
-        {!isFetching && items.length === 0 && (
-          <div className="text-center text-[12px] text-slate-400 py-10">{emptyText}</div>
-        )}
+          {isFetching && (
+            <div className="flex justify-center py-3">
+              <Loader2 size={16} className="animate-spin text-slate-300" />
+            </div>
+          )}
+          {!isFetching && itemCount === 0 && (
+            <div className="text-center text-[12px] text-slate-400 py-10">
+              {emptyText}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -372,40 +399,20 @@ export const ChatKnowledge = ({
   // --- Knowledge space data (load all on mount, no pagination) ---
   const [spaceKeyword, setSpaceKeyword] = useState("");
   const debouncedSpaceKeyword = useDebounce(spaceKeyword, 300);
-  const [allSpaces, setAllSpaces] = useState<any[]>([]);
+  const [spaceGroups, setSpaceGroups] = useState<KnowledgeSpaceGroup<any>[]>([]);
   const [spaceFetching, setSpaceFetching] = useState(false);
 
   const loadSpaces = useCallback(async () => {
     setSpaceFetching(true);
     try {
-      // Fetch "mine" + "joined" + "department" in parallel and merge into a single list
+      // Fetch all three existing sources in parallel. Grouping stays client-side
+      // and follows the same ownership buckets as the knowledge-space page.
       const [mine, joined, department] = await Promise.all([
         getMineSpacesApi(),
         getJoinedSpacesApi(),
         getDepartmentSpacesApi(),
       ]);
-      // Dedupe by id (a space could in principle appear in more than one list)
-      const seen = new Set<string | number>();
-      const merged: any[] = [];
-      for (const s of [...mine, ...joined, ...department]) {
-        if (seen.has(s.id)) continue;
-        seen.add(s.id);
-        merged.push(s);
-      }
-      // Sort A–Z, English (ASCII-leading) names first, then Chinese names.
-      // Within each bucket, compare with the appropriate locale so that
-      // pinyin order is used for CJK and natural order for ASCII.
-      merged.sort((a, b) => {
-        const an = (a.name || "").trim();
-        const bn = (b.name || "").trim();
-        const aIsEn = an.length > 0 && an.charCodeAt(0) < 128;
-        const bIsEn = bn.length > 0 && bn.charCodeAt(0) < 128;
-        if (aIsEn !== bIsEn) return aIsEn ? -1 : 1;
-        return an.localeCompare(bn, aIsEn ? "en" : "zh-Hans-u-co-pinyin", {
-          sensitivity: "base",
-        });
-      });
-      setAllSpaces(merged);
+      setSpaceGroups(groupKnowledgeSpaces(mine, joined, department));
     } catch (err) {
       console.error("[ChatKnowledge] Failed to load spaces:", err);
     } finally {
@@ -424,14 +431,19 @@ export const ChatKnowledge = ({
   }, [rootOpen, loadSpaces]);
 
   // Client-side filter by keyword
-  const filteredSpaces = useMemo(
+  const filteredSpaceGroups = useMemo(
     () =>
-      debouncedSpaceKeyword
-        ? allSpaces.filter((s) =>
-          s.name?.toLowerCase().includes(debouncedSpaceKeyword.toLowerCase())
-        )
-        : allSpaces,
-    [allSpaces, debouncedSpaceKeyword]
+      filterKnowledgeSpaceGroups(spaceGroups, debouncedSpaceKeyword).map((group) => ({
+        ...group,
+        label: localize(
+          group.key === "department"
+            ? "com_knowledge.department_spaces"
+            : group.key === "created"
+              ? "com_knowledge.created_by_me"
+              : "com_knowledge.joined_by_me",
+        ),
+      })),
+    [spaceGroups, debouncedSpaceKeyword, localize],
   );
 
   // Comma-separated ids of admin-configured org KBs. Passed to the backend so
@@ -707,7 +719,8 @@ export const ChatKnowledge = ({
               placeholder={localize('com_chat_knowledge_placeholder_search_space')}
               keyword={spaceKeyword}
               setKeyword={setSpaceKeyword}
-              items={filteredSpaces}
+              items={[]}
+              sections={filteredSpaceGroups}
               selectedItems={selectedKnowledgeSpaces}
               onToggle={(item) => handleToggle(item, 'space')}
               isFetching={spaceFetching}
@@ -728,7 +741,8 @@ export const ChatKnowledge = ({
               placeholder={localize('com_chat_knowledge_placeholder_search_space')}
               keyword={spaceKeyword}
               setKeyword={setSpaceKeyword}
-              items={filteredSpaces}
+              items={[]}
+              sections={filteredSpaceGroups}
               selectedItems={selectedKnowledgeSpaces}
               onToggle={(item) => handleToggle(item, 'space')}
               isFetching={spaceFetching}
