@@ -106,5 +106,11 @@ describe("COFCO display size", () => {
     expect(bodyRule).toMatch(
       /height:\s*var\(--bisheng-display-viewport-height,\s*100dvh\)\s*!important/
     );
+    expect(css).toMatch(
+      /\[data-radix-popper-content-wrapper\]\s*\{\s*zoom:\s*calc\(1\s*\/\s*var\(--bisheng-display-scale,\s*1\)\)/
+    );
+    expect(css).toMatch(
+      /\[data-radix-popper-content-wrapper\]\s*>\s*\*\s*\{\s*zoom:\s*var\(--bisheng-display-scale,\s*1\)/
+    );
   });
 });

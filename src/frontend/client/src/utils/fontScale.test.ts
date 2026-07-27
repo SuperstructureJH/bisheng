@@ -86,6 +86,12 @@ describe('COFCO display size', () => {
     expect(bodyRule).toMatch(
       /height:\s*var\(--bisheng-display-viewport-height,\s*100dvh\)\s*!important/,
     );
+    expect(css).toMatch(
+      /\[data-radix-popper-content-wrapper\]\s*\{\s*zoom:\s*calc\(1\s*\/\s*var\(--bisheng-display-scale,\s*1\)\)/,
+    );
+    expect(css).toMatch(
+      /\[data-radix-popper-content-wrapper\]\s*>\s*\*\s*\{\s*zoom:\s*var\(--bisheng-display-scale,\s*1\)/,
+    );
   });
 
   it('sizes desktop full-screen roots from the compensated application layer', () => {
@@ -95,5 +101,13 @@ describe('COFCO display size', () => {
     expect(layout).toContain('bisheng-display-viewport relative flex w-full');
     expect(layout).toContain("isMobile ? 'min-h-[100dvh] overflow-x-clip' : 'h-full overflow-hidden'");
     expect(root).toContain(": 'h-full max-h-full'");
+  });
+
+  it('lets Radix collision handling place the rail account menu', () => {
+    const menu = readFileSync(join(clientRoot, 'src/layouts/UserPopMenu.tsx'), 'utf8');
+
+    expect(menu).toContain('sideOffset={8}');
+    expect(menu).toContain('collisionPadding={8}');
+    expect(menu).not.toContain('window.innerHeight - marginBottom');
   });
 });

@@ -21,6 +21,20 @@ html[data-bisheng-display-scale] .bisheng-display-viewport {
   min-height: 0;
 }
 
+/*
+ * Radix/Floating UI writes physical viewport coordinates to this fixed wrapper.
+ * Cancel the body zoom for the positioning layer, then reapply it to the
+ * rendered popup so menus keep the selected size without double-scaling their
+ * coordinates beyond the viewport.
+ */
+html[data-bisheng-display-scale] [data-radix-popper-content-wrapper] {
+  zoom: calc(1 / var(--bisheng-display-scale, 1));
+}
+
+html[data-bisheng-display-scale] [data-radix-popper-content-wrapper] > * {
+  zoom: var(--bisheng-display-scale, 1);
+}
+
 /* Shared baseline size tokens. COFCO display sizing uses layout-aware zoom above. */
 :root {
   --bs-ui-font-size: 14px;

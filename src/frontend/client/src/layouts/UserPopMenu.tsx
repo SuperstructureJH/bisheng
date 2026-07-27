@@ -1,6 +1,6 @@
 import { Check, ChevronRight, Type } from "lucide-react";
 import { Outlined } from "bisheng-icons";
-import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useRecoilState } from "recoil";
 import { AccountInfoDialog } from "~/components/AccountInfoDialog";
 import { NotificationsDialog } from "~/components/NotificationsDialog";
@@ -292,9 +292,6 @@ function UserPopMenuDrawer() {
 
 function UserPopMenuRail() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [menuAlignOffset, setMenuAlignOffset] = useState(0);
-    const [menuSideOffset, setMenuSideOffset] = useState(0);
-    const triggerRef = useRef<HTMLDivElement>(null);
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
     const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
     const [approvalDialogTarget, setApprovalDialogTarget] = useState<ApprovalCenterTarget>({ tab: "my_tasks" });
@@ -374,33 +371,11 @@ function UserPopMenuRail() {
         fn();
     };
 
-    useLayoutEffect(() => {
-        if (!dropdownOpen) {
-            setMenuAlignOffset(0);
-            setMenuSideOffset(0);
-            return;
-        }
-        const measure = () => {
-            const el = triggerRef.current;
-            if (!el) return;
-            const r = el.getBoundingClientRect();
-            const marginX = 8;
-            const marginBottom = 8;
-            // 与视口：左缘 8px；底缘 8px（side=top + sideOffset 将菜单底侧锚到视口底上方）
-            setMenuAlignOffset(marginX - Math.round(r.left));
-            setMenuSideOffset(Math.round(r.top - (window.innerHeight - marginBottom)));
-        };
-        measure();
-        window.addEventListener("resize", measure);
-        return () => window.removeEventListener("resize", measure);
-    }, [dropdownOpen]);
-
     return (
         <>
             <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownOpenChange}>
                 <DropdownMenuTrigger asChild>
                     <div
-                        ref={triggerRef}
                         className="relative size-10 cursor-pointer outline-none active:scale-95 transition-transform"
                     >
                         <Avatar className="size-10 hover:opacity-90 transition-opacity">
@@ -423,8 +398,7 @@ function UserPopMenuRail() {
                     side="top"
                     align="start"
                     width={200}
-                    alignOffset={menuAlignOffset}
-                    sideOffset={menuSideOffset}
+                    sideOffset={8}
                     collisionPadding={8}
                     onCloseAutoFocus={(e) => e.preventDefault()}
                 >
