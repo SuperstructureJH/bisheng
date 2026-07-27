@@ -29,13 +29,11 @@ describe("knowledge space dropdown grouping", () => {
     expect(groups[2].items.map((space) => space.id)).toEqual([30]);
   });
 
-  it("keeps empty groups before search so the default three-column structure is stable", () => {
-    const groups = groupKnowledgeSpaces([], [], department);
+  it("hides empty groups in the default list", () => {
+    const groups = groupKnowledgeSpaces(mine, [], []);
 
     expect(filterKnowledgeSpaceGroups(groups, "").map((group) => group.key)).toEqual([
-      "department",
       "created",
-      "joined",
     ]);
   });
 

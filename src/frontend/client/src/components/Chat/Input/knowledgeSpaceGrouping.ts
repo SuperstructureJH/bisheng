@@ -43,15 +43,17 @@ export function filterKnowledgeSpaceGroups<T extends KnowledgeSpaceLike>(
   groups: KnowledgeSpaceGroup<T>[],
   keyword: string,
 ): KnowledgeSpaceGroup<T>[] {
-  if (!keyword) return groups;
-
   const normalizedKeyword = keyword.toLowerCase();
   return groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((space) =>
-        space.name?.toLowerCase().includes(normalizedKeyword),
-      ),
-    }))
+    .map((group) =>
+      keyword
+        ? {
+          ...group,
+          items: group.items.filter((space) =>
+            space.name?.toLowerCase().includes(normalizedKeyword),
+          ),
+        }
+        : group,
+    )
     .filter((group) => group.items.length > 0);
 }
