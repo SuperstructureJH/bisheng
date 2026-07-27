@@ -506,7 +506,7 @@ export default function MainLayout() {
               systemMenuRevealing && 'rounded-l-[24px]',
               isMobile
                 ? 'h-auto min-h-[100dvh] overflow-visible'
-                : 'scrollbar-os h-full overflow-y-auto overscroll-y-none',
+                : 'scrollbar-os h-[calc(var(--bisheng-display-viewport-height,100dvh)-16px)] overflow-y-auto overscroll-y-none',
               systemMenuRevealing && 'overflow-hidden',
             )}
           >
@@ -548,8 +548,8 @@ export default function MainLayout() {
                   ? 'flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden'
                   : 'h-auto min-h-[100dvh] overflow-visible'
                 : innerScrollShell
-                  ? 'flex h-full min-h-0 flex-col overflow-hidden overscroll-y-none'
-                  : 'scrollbar-os h-full overflow-y-auto overscroll-y-none',
+                  ? 'flex h-[calc(var(--bisheng-display-viewport-height,100dvh)-16px)] min-h-0 flex-col overflow-hidden overscroll-y-none'
+                  : 'scrollbar-os h-[calc(var(--bisheng-display-viewport-height,100dvh)-16px)] overflow-y-auto overscroll-y-none',
               // While the system menu is revealed, clip content to the rounded corners so the
               // exposed left edge shows the radius (e.g. knowledge uses overflow-visible otherwise).
               systemMenuRevealing && 'overflow-hidden',
