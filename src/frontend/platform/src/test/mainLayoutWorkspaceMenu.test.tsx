@@ -40,6 +40,10 @@ vi.mock("@/components/bs-icons/menu/system", () => ({
   DashboardIcon: () => <span aria-hidden="true" />,
 }));
 
+vi.mock("@/components/FontSizeControl", () => ({
+  FontSizeControl: () => <div data-testid="font-size-control" />,
+}));
+
 vi.mock("@/components/bs-ui/select/hover", () => ({
   SelectHover: ({ triagger, children }: { triagger: ReactNode; children: ReactNode }) => (
     <div>
@@ -189,5 +193,16 @@ describe("MainLayout workspace entry", () => {
     expect(
       screen.queryByRole("button", { name: "menu.workspace" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens the admin font-size control in a separate left-side popover", () => {
+    renderLayout(["workstation"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "menu.fontSize" }));
+
+    const popover = screen.getByTestId("admin-font-size-popover");
+    expect(popover).toHaveAttribute("data-side", "left");
+    expect(popover).toHaveClass("absolute");
+    expect(screen.getByTestId("font-size-control")).toBeInTheDocument();
   });
 });

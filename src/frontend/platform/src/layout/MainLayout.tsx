@@ -19,7 +19,7 @@ import { bsConfirm } from "@/components/bs-ui/alertDialog/useConfirm";
 import { SelectHover, SelectHoverItem } from "@/components/bs-ui/select/hover";
 import { locationContext } from "@/contexts/locationContext";
 import i18next from "i18next";
-import { Check, ChevronDown, GanttChartIcon, Lock, MoonStar, Sun, Type } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, GanttChartIcon, Lock, MoonStar, Sun, Type } from "lucide-react";
 import { ApprovalMenuIcon } from "@/components/bs-icons/menu/approval";
 import { TenantMenuIcon } from "@/components/bs-icons/menu/tenant";
 import { Suspense, useContext, useEffect, useMemo, useState } from "react";
@@ -166,6 +166,10 @@ export default function MainLayout() {
                         {/* @ts-ignore */}
                         <img className="h-7 w-7 rounded-2xl mr-4" src={__APP_ENV__.BASE_URL + (user.avatar || '/assets/user.png')} alt="" />
                         <SelectHover
+                            className="overflow-visible"
+                            onOpenChange={(open) => {
+                                if (!open) setFontSizeOpen(false)
+                            }}
                             triagger={
                                 <span className="leading-8 text-[14px] mr-8 max-w-40 cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap">
                                     {user.user_name} <ChevronDown className="inline-block mt-[-2px]" />
@@ -173,17 +177,35 @@ export default function MainLayout() {
                             }>
                             {hasWorkbenchEntry && <SelectHoverItem onClick={() => window.open('/workspace/')}><GanttChartIcon className="w-4 h-4 mr-1" /><span>{t('menu.workspace')}</span></SelectHoverItem>}
                             <SelectHoverItem onClick={JumpResetPage}><Lock className="w-4 h-4 mr-1" /><span>{t('menu.changePwd')}</span></SelectHoverItem>
-                            <SelectHoverItem
-                                onClick={(event) => {
-                                    event.stopPropagation()
-                                    setFontSizeOpen((open) => !open)
-                                }}
-                            >
-                                <Type className="w-4 h-4 mr-1 bisheng-scalable-icon" />
-                                <span className="flex-1">{t('menu.fontSize')}</span>
-                                <ChevronDown className={`absolute right-2 w-4 h-4 transition-transform ${fontSizeOpen ? 'rotate-180' : ''}`} />
-                            </SelectHoverItem>
-                            {fontSizeOpen && <FontSizeControl className="border-t border-[#e5e6eb] dark:border-gray-700" />}
+                            <div className="relative">
+                                <SelectHoverItem
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        setFontSizeOpen((open) => !open)
+                                    }}
+                                    aria-haspopup="dialog"
+                                    aria-expanded={fontSizeOpen}
+                                >
+                                    <Type className="w-4 h-4 mr-1 bisheng-scalable-icon" />
+                                    <span className="flex-1">{t('menu.fontSize')}</span>
+                                    <ChevronLeft className="absolute right-2 w-4 h-4" />
+                                </SelectHoverItem>
+                                {fontSizeOpen && (
+                                    <div
+                                        role="dialog"
+                                        aria-label={t('menu.fontSize')}
+                                        data-testid="admin-font-size-popover"
+                                        data-side="left"
+                                        className="absolute right-[calc(100%+8px)] top-0 z-50 w-[280px] rounded-xl border border-[#e5e6eb] bg-popover p-2 shadow-[0_12px_32px_rgba(31,35,41,0.16)] dark:border-gray-700 dark:bg-[#2A2B2E]"
+                                    >
+                                        <span
+                                            aria-hidden
+                                            className="absolute -right-1.5 top-3 size-3 rotate-45 border-r border-t border-[#e5e6eb] bg-popover dark:border-gray-700 dark:bg-[#2A2B2E]"
+                                        />
+                                        <FontSizeControl />
+                                    </div>
+                                )}
+                            </div>
                             <SelectHoverItem onClick={handleLogout} className="text-[#f53f3f] hover:bg-red-50 dark:hover:bg-red-950/30 dark:text-[#f53f3f]"><QuitIcon className="w-4 h-4 mr-1" /><span>{t('menu.logout')}</span></SelectHoverItem>
                         </SelectHover>
                     </div>

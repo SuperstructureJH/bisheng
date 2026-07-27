@@ -10,23 +10,28 @@ export function SelectHoverItem({ children, className, ...props }) {
 }
 
 
-export function SelectHover({ triagger, className, children }) {
+export function SelectHover({ triagger, className, children, onOpenChange }) {
     const [open, setOpen] = useState(false);
     const timerRef = useRef(null);
 
+    const updateOpen = (nextOpen: boolean) => {
+        setOpen(nextOpen);
+        onOpenChange?.(nextOpen);
+    };
+
     const handleMouseEnter = () => {
         if (timerRef.current) clearTimeout(timerRef.current);
-        setOpen(true);
+        updateOpen(true);
     };
 
     const handleMouseLeave = () => {
         timerRef.current = setTimeout(() => {
-            setOpen(false);
+            updateOpen(false);
         }, 150);
     };
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={updateOpen}>
             <PopoverTrigger
                 asChild
                 onMouseEnter={handleMouseEnter}
