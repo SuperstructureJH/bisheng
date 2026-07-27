@@ -194,3 +194,52 @@
 - `body` 仍按 `100 / scale` 设置反向逻辑宽高，`html` 仅负责物理视口裁切，`#root` 和双端主布局继续继承父级 100% 尺寸。
 - 本机 1280×720 探针在 110% 下得到：`inner=1280×720`、文档 `scroll=1280×720`、缩放后 `body=1280×720`；右下固定气泡 `right=1258`、`bottom=698`，完整位于物理视口内。
 - 本节是第二次部署前验证，不等同于 13100 最终 PASS；必须重新构建、部署并在登录态工作台和管理后台执行完整回归。
+
+## 第七轮：定位嵌套容器并完成最终回归
+
+第六轮候选部署后继续在用户本机 Chrome 的既有登录态执行回归。该轮没有把“主壳不再越界”直接当作完成，而是依次检查工作台白卡、个人菜单、字号二级气泡、管理后台和业务弹窗，保留每次新暴露问题的失败状态。
+
+### 迭代过程与失败保留
+
+| Bug ID | 发现阶段 | 状态 | 说明 | 修复 |
+|---|---|---|---|---|
+| F042-08 | 大档工作台个人菜单 | 已修复 | `body zoom` 修复了主页面边界，但 Radix Portal 定位包装层仍按缩放前坐标参与定位，个人菜单和二级气泡可能越界 | `ee437519a` 为 Portal 包装层反向抵消缩放，`0380e3942` 让气泡内容重新应用当前比例并使用定位库碰撞边界 |
+| F042-09 | 小档工作台白卡 | 已修复 | 将工作台轨道改为继承父级高度后，嵌套 KeepAlive 页面仍使用普通 `height: 100%`；该包含块没有明确高度，小档白卡仍未填满浏览器底部 | `53982e4af` 改为使用补偿后的 `--bisheng-display-viewport-height` 并扣除工作台壳层 16px 上下边距 |
+
+中间提交 `5b1e89d04` 已使工作台轨道和头像入口保持在补偿视口内，但首轮 UI 复测发现 F042-09，因此没有将其作为最终版本。最终部署提交为 `53982e4af`。
+
+### 最终自动检查
+
+| 检查项 | 状态 | 结果 |
+|---|---|---|
+| 工作台字号与视口合同 | PASS | 15 / 15；覆盖三档映射、反向逻辑视口、标品清理、显示层 CSS、Portal 包装层与嵌套工作台高度 |
+| 管理后台字号与菜单合同 | PASS | 20 / 20；覆盖三档映射、显示层 CSS、左侧独立气泡和菜单结构 |
+| 工作台生产构建 | PASS | Vite 生产构建成功；仅保留项目既有警告 |
+| 管理后台生产构建 | PASS | Vite 生产构建成功；仅保留项目既有警告 |
+| 架构检查 | PASS | `scripts/arch-guard.sh` 退出码 0 |
+| 服务器源码一致性 | PASS | 服务器 `MainLayout.tsx` SHA-256 为 `48353718c2b03a7d80529e2a9ccacda65de4a7482d7c578a1a0c9694d7e6ee49`，与本地最终文件一致 |
+| 13100 健康探测 | PASS | `/` 与 `/workspace/knowledge/space/2` 均返回 HTTP 200 |
+
+### 最终登录态 UI 回归
+
+Codex 内置浏览器仍被验证码登录阻断，因此按验收规范回退到用户本机 Chrome 的既有登录态执行。当前窗口内容区约为 1296×675；本轮证明用户反馈的实际窗口问题已经修复，但不替代 1024px / 1440px 两个专项窗口回归。
+
+| Case ID | 状态 | 实际结果 | 证据 |
+|---|---|---|---|
+| TC-001 / TC-002 | PASS | 工作台和管理后台个人菜单均展示【字体大小】入口 | `test-evidence/run-8/TC-014-large-font-popover-after.png`、`TC-014-admin-large-font-popover-after.jpeg` |
+| TC-003 | PASS | 【小】按 90% 缩小且页面补满，【标准】恢复 100%，【大】按 110% 放大且不超出浏览器窗口 | `TC-014-small-full-viewport-after.jpeg`、`TC-014-large-full-viewport-after.jpeg` |
+| TC-004 | PASS | 工作台选择【大】后进入管理后台，管理后台保持大档并显示选中状态；验收结束后恢复【标准】 | 双端登录态检查 |
+| TC-010 | PASS | 工作台从个人菜单右侧弹出字号气泡；管理后台从个人菜单左侧弹出，主体和箭头完整位于窗口内 | `TC-014-large-font-popover-after.png`、`TC-014-admin-large-font-popover-after.jpeg` |
+| TC-011 | PASS | 工作台知识页、对话输入区及管理后台模型页在当前窗口的小档和大档下均位于可视区 | `TC-014-small-full-viewport-after.jpeg`、`TC-014-large-full-viewport-after.jpeg`、`TC-014-admin-large-font-popover-after.jpeg` |
+| TC-012 | NOT_RUN | 尚未分别调整为 1024px / 1440px 目标窗口执行专项回归 | 待 T016 |
+| TC-013 | PASS | 最终前端已在隔离编排中重建；13100 两个探测入口返回 HTTP 200 | 服务器部署与健康记录 |
+| TC-014 | PASS | 小档不再留下底部或右侧空白；大档不再产生页面级横向或纵向溢出 | `TC-014-small-full-viewport-after.jpeg`、`TC-014-large-full-viewport-after.jpeg` |
+| TC-015 | PASS | 大档下工作台个人菜单、字号二级气泡、管理后台字号气泡和消息弹窗遮罩均完整位于物理视口内 | `TC-014-large-font-popover-after.png`、`TC-014-admin-large-font-popover-after.jpeg`、`TC-015-large-modal-overlay-after.jpeg` |
+
+### 最终部署记录
+
+- 最终提交：`53982e4af`。
+- 服务器目标：`/opt/codex-bisheng`；隔离编排：`docker/docker-compose.codex.yml`，项目名 `codex-bisheng`。
+- 最后两次覆盖前备份：`.codex-deploy-backups/cofco-display-scale-shell-20260727-190400-compensated-panel-predeploy`、`.codex-deploy-backups/cofco-display-scale-shell-20260727-190500-shell-height-predeploy`。
+- 最终变更仅涉及工作台前端；服务器工作台生产构建通过后只重启隔离 frontend，未重建后端。
+- 最终结论：用户本轮反馈的“小档不补满、大档超出屏幕”已在 13100 的当前登录态窗口复现、修复并回归通过；1024px / 1440px 专项窗口仍按 `NOT_RUN` 保留，不提前记为通过。
