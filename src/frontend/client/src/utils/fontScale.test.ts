@@ -74,14 +74,16 @@ describe('COFCO display size', () => {
     expect(readAppliedFontScaleLevel()).toBe(3);
   });
 
-  it('keeps the browser viewport physical and scales a compensated body layer', () => {
+  it('uses layout-aware zoom on a compensated body layer', () => {
     const css = readFileSync(join(clientRoot, 'src/style.css'), 'utf8');
+    const bodyRule = css.match(
+      /html\[data-bisheng-display-scale\]\s+body\s*\{([^}]*)\}/,
+    )?.[1];
 
     expect(css).not.toMatch(/html\[data-bisheng-display-scale\]\s*\{\s*zoom:/);
-    expect(css).toMatch(
-      /html\[data-bisheng-display-scale\]\s+body\s*\{[\s\S]*?transform:\s*scale\(var\(--bisheng-display-scale,\s*1\)\)/,
-    );
-    expect(css).toMatch(
+    expect(bodyRule).toMatch(/zoom:\s*var\(--bisheng-display-scale,\s*1\)/);
+    expect(bodyRule).not.toMatch(/transform:\s*scale\(/);
+    expect(bodyRule).toMatch(
       /height:\s*var\(--bisheng-display-viewport-height,\s*100dvh\)\s*!important/,
     );
   });

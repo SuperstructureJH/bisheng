@@ -6,8 +6,7 @@ html[data-bisheng-display-scale] body {
     width: var(--bisheng-display-viewport-width, 100vw);
     height: var(--bisheng-display-viewport-height, 100dvh) !important;
     overflow: hidden;
-    transform: scale(var(--bisheng-display-scale, 1));
-    transform-origin: top left;
+    zoom: var(--bisheng-display-scale, 1);
 }
 
 html[data-bisheng-display-scale] #root,
@@ -18,7 +17,7 @@ html[data-bisheng-display-scale] .bisheng-display-viewport {
     min-height: 0;
 }
 
-/* Shared baseline size tokens. COFCO display sizing uses the application layer above. */
+/* Shared baseline size tokens. COFCO display sizing uses layout-aware zoom above. */
 :root {
     --bs-ui-font-size: 14px; --bs-ui-line-height: 22px;
     --bs-ui-title-font-size: 16px; --bs-ui-title-line-height: 24px;
