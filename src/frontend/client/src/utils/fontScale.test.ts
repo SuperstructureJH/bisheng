@@ -100,6 +100,9 @@ describe('COFCO display size', () => {
 
     expect(layout).toContain('bisheng-display-viewport relative flex w-full');
     expect(layout).toContain("isMobile ? 'min-h-[100dvh] overflow-x-clip' : 'h-full overflow-hidden'");
+    expect(layout).toContain("isMobile ? 'h-[100dvh]' : 'h-full'");
+    expect(layout).not.toContain("'scrollbar-os h-[calc(100dvh-16px)]");
+    expect(layout).not.toContain("'flex h-[calc(100dvh-16px)]");
     expect(root).toContain(": 'h-full max-h-full'");
   });
 

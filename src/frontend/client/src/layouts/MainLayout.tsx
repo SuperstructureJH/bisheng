@@ -216,7 +216,8 @@ function Sidebar({
     <div
       className={cn(
         showExpandedHubSidebar ? (overlay ? 'w-full' : 'w-[38vw]') : 'bisheng-primary-rail',
-        'h-[100dvh] flex flex-col justify-between py-4 px-2 shrink-0 bg-[rgb(227, 227, 227)]',
+        'flex flex-col justify-between py-4 px-2 shrink-0 bg-[rgb(227, 227, 227)]',
+        isMobile ? 'h-[100dvh]' : 'h-full',
         // Rail: let the content column shrink to its 44px width instead of stretching the track.
         // Expanded drawer keeps the stretched full-width layout.
         showExpandedHubSidebar ? undefined : 'items-center',
@@ -505,7 +506,7 @@ export default function MainLayout() {
               systemMenuRevealing && 'rounded-l-[24px]',
               isMobile
                 ? 'h-auto min-h-[100dvh] overflow-visible'
-                : 'scrollbar-os h-[calc(100dvh-16px)] overflow-y-auto overscroll-y-none',
+                : 'scrollbar-os h-full overflow-y-auto overscroll-y-none',
               systemMenuRevealing && 'overflow-hidden',
             )}
           >
@@ -547,8 +548,8 @@ export default function MainLayout() {
                   ? 'flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden'
                   : 'h-auto min-h-[100dvh] overflow-visible'
                 : innerScrollShell
-                  ? 'flex h-[calc(100dvh-16px)] min-h-0 flex-col overflow-hidden overscroll-y-none'
-                  : 'scrollbar-os h-[calc(100dvh-16px)] overflow-y-auto overscroll-y-none',
+                  ? 'flex h-full min-h-0 flex-col overflow-hidden overscroll-y-none'
+                  : 'scrollbar-os h-full overflow-y-auto overscroll-y-none',
               // While the system menu is revealed, clip content to the rounded corners so the
               // exposed left edge shows the radius (e.g. knowledge uses overflow-visible otherwise).
               systemMenuRevealing && 'overflow-hidden',
