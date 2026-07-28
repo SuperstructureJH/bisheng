@@ -45,9 +45,9 @@ const ThinkingContent: FC<ThinkingContentProps> = memo(({
             <div className="flex w-full min-w-0 gap-1.5 animate-thinking-appear">
                 <div className="flex shrink-0 flex-col items-center gap-2 self-stretch pt-[3px]">
                     {active ? (
-                        <Outlined.Loading
+                        <Outlined.Bulb
                             size={16}
-                            className="shrink-0 animate-spin text-primary"
+                            className="shrink-0 text-primary"
                         />
                     ) : (
                         <Outlined.CheckCircle

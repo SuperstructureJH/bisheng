@@ -55,7 +55,7 @@ describe("DeepThinkingGroup", () => {
         );
     });
 
-    it("keeps the main label fixed and rolls the current tool below it", () => {
+    it("keeps the main label static and puts the only spinner on the current tool", () => {
         const streamingEvents: AgentEvent[] = [
             events[0],
             {
@@ -75,9 +75,33 @@ describe("DeepThinkingGroup", () => {
             "正在联网搜索",
         );
         expect(within(trigger).getByText("正在联网搜索")).toBeInTheDocument();
-        expect(trigger.querySelector(".animate-spin")).toBeInTheDocument();
+        expect(trigger.querySelector(".animate-spin")).not.toBeInTheDocument();
 
         fireEvent.click(trigger);
-        expect(trigger.querySelector(".animate-spin")).toBeInTheDocument();
+        const group = trigger.parentElement as HTMLElement;
+        expect(group.querySelectorAll(".animate-spin")).toHaveLength(1);
+    });
+
+    it("does not show a spinner while the model is only thinking", () => {
+        render(
+            <RecoilRoot>
+                <DeepThinkingGroup
+                    events={[
+                        {
+                            type: "thinking",
+                            content: "正在分析问题。",
+                            started_at: 1000,
+                        },
+                    ]}
+                    isStreaming
+                />
+            </RecoilRoot>,
+        );
+
+        const trigger = screen.getByRole("button", { name: /正在深入思考/ });
+        fireEvent.click(trigger);
+
+        const group = trigger.parentElement as HTMLElement;
+        expect(group.querySelector(".animate-spin")).not.toBeInTheDocument();
     });
 });

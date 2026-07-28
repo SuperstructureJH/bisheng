@@ -180,17 +180,13 @@ const DeepThinkingGroup: FC<DeepThinkingGroupProps> = memo(
                     type="button"
                     onClick={handleClick}
                     aria-expanded={isExpanded}
-                    className={cn(BUTTON_STYLES.base, isStreaming && "animate-pulse")}
+                    className={BUTTON_STYLES.base}
                 >
                     <span className="mt-[3px] flex size-4 shrink-0 items-center justify-center">
-                        {isStreaming ? (
-                            <Outlined.Loading
-                                size={16}
-                                className="animate-spin text-primary"
-                            />
-                        ) : (
-                            <Outlined.Bulb size={16} className="text-[#999999]" />
-                        )}
+                        <Outlined.Bulb
+                            size={16}
+                            className={isStreaming ? "text-primary" : "text-[#999999]"}
+                        />
                     </span>
                     <span className="flex min-w-0 flex-col">
                         <span className="flex items-center gap-1">
