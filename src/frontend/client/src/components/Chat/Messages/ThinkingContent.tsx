@@ -18,9 +18,18 @@ export interface ThinkingContentProps {
      *  Set to true when something follows in the timeline (e.g., tool cards),
      *  so the timeline is continuous even when this section is collapsed. */
     showConnector?: boolean;
+    /** Render as a direct timeline passage under the outer group fold. */
+    timeline?: boolean;
+    /** True only for the currently streaming thinking passage. */
+    active?: boolean;
 }
 
-const ThinkingContent: FC<ThinkingContentProps> = memo(({ reasoning, showConnector = false }) => {
+const ThinkingContent: FC<ThinkingContentProps> = memo(({
+    reasoning,
+    showConnector = false,
+    timeline = false,
+    active = false,
+}) => {
     const showThinkingDefault = useRecoilValue<boolean>(store.showThinking);
     const [isExpanded, setIsExpanded] = useState(showThinkingDefault);
 
@@ -30,6 +39,32 @@ const ThinkingContent: FC<ThinkingContentProps> = memo(({ reasoning, showConnect
     }, []);
 
     if (!reasoning) return null;
+
+    if (timeline) {
+        return (
+            <div className="flex w-full min-w-0 gap-1.5 animate-thinking-appear">
+                <div className="flex shrink-0 flex-col items-center gap-2 self-stretch pt-[3px]">
+                    {active ? (
+                        <Outlined.Loading
+                            size={16}
+                            className="shrink-0 animate-spin text-primary"
+                        />
+                    ) : (
+                        <Outlined.CheckCircle
+                            size={16}
+                            className="shrink-0 text-[#999999]"
+                        />
+                    )}
+                    {showConnector && (
+                        <div className="w-px flex-1 bg-[#E0E0E0]" aria-hidden="true" />
+                    )}
+                </div>
+                <p className="min-w-0 flex-1 whitespace-pre-wrap break-words pb-3 text-xs leading-5 text-[#818181]">
+                    {reasoning}
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex w-full min-w-0 gap-1.5 animate-thinking-appear">
