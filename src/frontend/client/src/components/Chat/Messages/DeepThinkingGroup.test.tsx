@@ -28,7 +28,7 @@ const events: AgentEvent[] = [
 ];
 
 describe("DeepThinkingGroup", () => {
-    it("starts collapsed without an outer thought summary and expands in event order", () => {
+    it("starts expanded in event order and can be collapsed to the outer status", () => {
         render(
             <RecoilRoot>
                 <DeepThinkingGroup events={events} isStreaming={false} />
@@ -40,19 +40,21 @@ describe("DeepThinkingGroup", () => {
         const fold = group?.lastElementChild as HTMLElement;
 
         expect(screen.getByText("已完成 1 次联网搜索")).toBeInTheDocument();
-        expect(screen.queryByTitle("思考 B。")).not.toBeInTheDocument();
-        expect(fold).toHaveStyle({ gridTemplateRows: "0fr" });
-
-        fireEvent.click(trigger);
+        expect(trigger).toHaveAttribute("aria-expanded", "true");
         expect(fold).toHaveStyle({ gridTemplateRows: "1fr" });
 
-        const timelineText = fold.textContent || "";
+        const timelineText = fold.textContent ?? "";
         expect(timelineText.indexOf("思考 A。")).toBeLessThan(
             timelineText.indexOf("已联网搜索"),
         );
         expect(timelineText.indexOf("已联网搜索")).toBeLessThan(
             timelineText.indexOf("思考 B。"),
         );
+
+        fireEvent.click(trigger);
+        expect(trigger).toHaveAttribute("aria-expanded", "false");
+        expect(fold).toHaveStyle({ gridTemplateRows: "0fr" });
+        expect(screen.getByText("已完成 1 次联网搜索")).toBeInTheDocument();
     });
 
     it("keeps the main label static and puts the only spinner on the current tool", () => {
@@ -77,7 +79,6 @@ describe("DeepThinkingGroup", () => {
         expect(within(trigger).getByText("正在联网搜索")).toBeInTheDocument();
         expect(trigger.querySelector(".animate-spin")).not.toBeInTheDocument();
 
-        fireEvent.click(trigger);
         const group = trigger.parentElement as HTMLElement;
         expect(group.querySelectorAll(".animate-spin")).toHaveLength(1);
     });
@@ -99,8 +100,6 @@ describe("DeepThinkingGroup", () => {
         );
 
         const trigger = screen.getByRole("button", { name: /正在深入思考/ });
-        fireEvent.click(trigger);
-
         const group = trigger.parentElement as HTMLElement;
         expect(group.querySelector(".animate-spin")).not.toBeInTheDocument();
     });

@@ -122,9 +122,9 @@ function durationFallback(events: AgentEvent[]): number {
 
 const DeepThinkingGroup: FC<DeepThinkingGroupProps> = memo(
     ({ events, isStreaming }) => {
-        // Daily mode follows the same quiet entry as task mode: the complete
-        // process starts collapsed while the group status remains visible.
-        const [isExpanded, setIsExpanded] = useState(false);
+        // Daily mode shows the complete process by default. Users can collapse
+        // it to keep only the stable status and current-activity ticker visible.
+        const [isExpanded, setIsExpanded] = useState(true);
 
         const start = groupStart(events);
         const end = groupEnd(events);
