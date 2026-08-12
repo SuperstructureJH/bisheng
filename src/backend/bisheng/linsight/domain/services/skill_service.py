@@ -90,7 +90,10 @@ class SkillService:
         )
         return SkillPage(
             data=[
-                SkillBrief.from_model(s, frontend_hidden=s.name in hidden_names)
+                SkillBrief.from_model(
+                    s,
+                    frontend_hidden=(s.name in hidden_names) if can_configure_frontend_hidden else None,
+                )
                 for s in skills
             ],
             total=total,
@@ -422,15 +425,18 @@ class SkillService:
             created_by=user_id,
         )
         skill = await LinsightSkillDao.create(skill)
-        try:
-            # Owner tuple is best-effort: PermissionService compensates failed
-            # writes via failed_tuples; the resource itself is never rolled back
-            # (design §7.4 step 6; FGA model registration tracked by TF-3).
-            await PermissionService.authorize(
-                object_type=SKILL_OBJECT_TYPE,
-                object_id=str(skill.id),
-                grants=[AuthorizeGrantItem(subject_type="user", subject_id=user_id, relation="owner")],
-            )
-        except Exception:
-            logger.exception("skill owner tuple write failed: skill_id={}", skill.id)
+        if source != SKILL_SOURCE_PRESET:
+            try:
+                # Tenant-authored Skills retain the F035 best-effort owner grant.
+                # System presets are managed exclusively through the global-super
+                # admin surface, so assigning them to the provisioning operator is
+                # both semantically wrong and incompatible with deployments whose
+                # OpenFGA model has not registered ``linsight_skill`` yet.
+                await PermissionService.authorize(
+                    object_type=SKILL_OBJECT_TYPE,
+                    object_id=str(skill.id),
+                    grants=[AuthorizeGrantItem(subject_type="user", subject_id=user_id, relation="owner")],
+                )
+            except Exception:
+                logger.exception("skill owner tuple write failed: skill_id={}", skill.id)
         return await self.get_detail(tenant_id, name)

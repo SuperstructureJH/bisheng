@@ -228,6 +228,9 @@ class TestCreate:
         assert operation == "updated"
         assert brief.frontend_hidden is True
         assert list(FakeSkillDao.rows) == ["docx"]
+        # Presets belong to the tenant/deployment policy, not the bootstrap
+        # operator, and therefore must not enqueue an unsupported owner tuple.
+        service_module.PermissionService.authorize.assert_not_awaited()
 
     async def test_preset_provision_refuses_same_id_tenant_skill(self, service):
         await service.create_from_form(TENANT, USER, _form(name="docx", display_name="租户自建 Word"))
