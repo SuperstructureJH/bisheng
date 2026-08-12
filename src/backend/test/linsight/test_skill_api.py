@@ -21,7 +21,7 @@ from bisheng.linsight.api.endpoints import skill as skill_endpoints
 from bisheng.linsight.domain.services import skill_service as service_module
 from bisheng.linsight.domain.services.skill_service import SkillService
 from bisheng.linsight.domain.services.skill_store import MAX_BUNDLE_SIZE, SkillStore
-from test.linsight.test_skill_service import FakeSkillDao
+from test.linsight.test_skill_service import FakeSkillDao, FakeSkillPolicyDao
 
 BASE = "/api/v1/linsight/skill"
 
@@ -39,11 +39,20 @@ class MockEndUser:
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     FakeSkillDao.reset()
+    FakeSkillPolicyDao.reset()
     monkeypatch.setattr(service_module, "LinsightSkillDao", FakeSkillDao)
+    monkeypatch.setattr(service_module, "LinsightSkillPolicyDao", FakeSkillPolicyDao)
     monkeypatch.setattr(service_module.PermissionService, "authorize", AsyncMock())
+    monkeypatch.setattr(service_module.AuditLogDao, "ainsert_v2", AsyncMock())
     # Endpoint-level service factory pinned to the tmp store; tenant id pinned to 1.
     monkeypatch.setattr(skill_endpoints, "SkillService", lambda: SkillService(store=SkillStore(root=tmp_path)))
     monkeypatch.setattr(skill_endpoints, "_current_tenant_id", lambda: 1)
+    super_state = {"value": True}
+
+    async def is_global_super(_login_user):
+        return super_state["value"]
+
+    monkeypatch.setattr(skill_endpoints, "_is_global_super", is_global_super)
 
     app = FastAPI()
     app.include_router(skill_endpoints.router, prefix="/api/v1/linsight")
@@ -61,7 +70,9 @@ def client(tmp_path, monkeypatch):
 
     app.dependency_overrides[UserPayload.get_tenant_admin_user] = admin_user
     app.dependency_overrides[UserPayload.get_login_user] = end_user
-    return TestClient(app, raise_server_exceptions=False)
+    test_client = TestClient(app, raise_server_exceptions=False)
+    test_client.super_state = super_state
+    return test_client
 
 
 def _md_bytes(name="demo-skill", display_name="演示技能") -> bytes:
@@ -96,12 +107,17 @@ class TestCrudFlow:
         body = _create_form(client)
         assert body["status_code"] == 200
         assert body["data"]["display_name"] == "季度财报分析"
+        assert "frontend_hidden" not in body["data"]
 
         listed = client.get(BASE).json()
         assert listed["data"]["total"] == 1
         item = listed["data"]["data"][0]
         assert item["display_name"] == "季度财报分析"
         assert item["enabled"] is True
+
+        client.super_state["value"] = False
+        tenant_admin_item = client.get(BASE).json()["data"]["data"][0]
+        assert "frontend_hidden" not in tenant_admin_item
 
         detail = client.get(f"{BASE}/ji-du-cai-bao-fen-xi").json()
         assert detail["data"]["source_text"].startswith("---")
@@ -148,6 +164,30 @@ class TestCrudFlow:
         _create_form(client)
         item = client.get(f"{BASE}/selectable").json()["data"][0]
         assert set(item) == {"name", "display_name", "description"}
+
+    def test_frontend_hidden_is_super_managed_and_business_invisible(self, client):
+        _create_form(client)
+        hidden = client.patch(
+            f"{BASE}/ji-du-cai-bao-fen-xi/frontend-hidden",
+            json={"frontend_hidden": True},
+        ).json()
+        assert hidden["data"]["frontend_hidden"] is True
+
+        super_list = client.get(BASE).json()["data"]
+        assert super_list["can_configure_frontend_hidden"] is True
+        assert super_list["data"][0]["frontend_hidden"] is True
+        assert client.get(f"{BASE}/selectable").json()["data"] == []
+
+        client.super_state["value"] = False
+        tenant_admin_list = client.get(BASE).json()["data"]
+        assert tenant_admin_list["can_configure_frontend_hidden"] is False
+        assert tenant_admin_list["data"] == []
+        assert client.get(f"{BASE}/ji-du-cai-bao-fen-xi").json()["status_code"] == 11053
+        denied = client.patch(
+            f"{BASE}/ji-du-cai-bao-fen-xi/frontend-hidden",
+            json={"frontend_hidden": False},
+        ).json()
+        assert denied["status_code"] == 11054
 
 
 class TestErrorCodes:

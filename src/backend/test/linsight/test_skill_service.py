@@ -4,6 +4,7 @@ fake; disk IO runs against a tmp SkillStore."""
 
 import io
 import zipfile
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -55,8 +56,17 @@ class FakeSkillDao:
         return next((s for s in cls.rows.values() if s.display_name == display_name), None)
 
     @classmethod
-    async def get_page(cls, keyword=None, enabled=None, page=1, page_size=10):
+    async def get_page(
+        cls,
+        keyword=None,
+        enabled=None,
+        page=1,
+        page_size=10,
+        include_frontend_hidden=True,
+    ):
         items = list(cls.rows.values())
+        if not include_frontend_hidden:
+            items = [s for s in items if not FakeSkillPolicyDao.rows.get(s.name, False)]
         if keyword:
             items = [s for s in items if keyword in s.display_name or keyword in s.description]
         if enabled is not None:
@@ -64,8 +74,12 @@ class FakeSkillDao:
         return items[(page - 1) * page_size : page * page_size], len(items)
 
     @classmethod
-    async def list_enabled(cls):
-        return [s for s in cls.rows.values() if s.enabled]
+    async def list_enabled(cls, include_frontend_hidden=True):
+        return [
+            s
+            for s in cls.rows.values()
+            if s.enabled and (include_frontend_hidden or not FakeSkillPolicyDao.rows.get(s.name, False))
+        ]
 
     @classmethod
     async def set_enabled(cls, name, enabled):
@@ -76,14 +90,46 @@ class FakeSkillDao:
 
     @classmethod
     async def delete_by_name(cls, name):
+        FakeSkillPolicyDao.rows.pop(name, None)
         return cls.rows.pop(name, None) is not None
+
+
+class FakeSkillPolicyDao:
+    rows: dict[str, bool] = {}
+
+    @classmethod
+    def reset(cls):
+        cls.rows = {}
+
+    @classmethod
+    async def get_by_skill_name(cls, skill_name):
+        if skill_name not in cls.rows:
+            return None
+        return SimpleNamespace(skill_name=skill_name, frontend_hidden=cls.rows[skill_name])
+
+    @classmethod
+    async def list_frontend_hidden_names(cls):
+        return {name for name, hidden in cls.rows.items() if hidden}
+
+    @classmethod
+    async def set_frontend_hidden(cls, skill_name, frontend_hidden, updated_by):
+        previous = cls.rows.get(skill_name, False)
+        cls.rows[skill_name] = frontend_hidden
+        return previous, SimpleNamespace(
+            skill_name=skill_name,
+            frontend_hidden=frontend_hidden,
+            updated_by=updated_by,
+        )
 
 
 @pytest.fixture
 def service(tmp_path, monkeypatch):
     FakeSkillDao.reset()
+    FakeSkillPolicyDao.reset()
     monkeypatch.setattr(service_module, "LinsightSkillDao", FakeSkillDao)
+    monkeypatch.setattr(service_module, "LinsightSkillPolicyDao", FakeSkillPolicyDao)
     monkeypatch.setattr(service_module.PermissionService, "authorize", AsyncMock())
+    monkeypatch.setattr(service_module.AuditLogDao, "ainsert_v2", AsyncMock())
     return SkillService(store=SkillStore(root=tmp_path))
 
 
@@ -170,6 +216,24 @@ class TestCreate:
         with pytest.raises(SkillValidationError, match="description"):
             await service.create_from_upload(TENANT, USER, "demo-skill.md", bad)
 
+    async def test_preset_provision_is_hidden_enabled_and_idempotent(self, service):
+        form = _form(name="docx", display_name="Word 文档处理")
+        brief, operation = await service.provision_preset(TENANT, USER, form)
+        assert operation == "created"
+        assert brief.frontend_hidden is True
+        assert FakeSkillDao.rows["docx"].source == "preset"
+        assert FakeSkillDao.rows["docx"].enabled is True
+
+        brief, operation = await service.provision_preset(TENANT, USER, form)
+        assert operation == "updated"
+        assert brief.frontend_hidden is True
+        assert list(FakeSkillDao.rows) == ["docx"]
+
+    async def test_preset_provision_refuses_same_id_tenant_skill(self, service):
+        await service.create_from_form(TENANT, USER, _form(name="docx", display_name="租户自建 Word"))
+        with pytest.raises(SkillValidationError, match="refusing to overwrite"):
+            await service.provision_preset(TENANT, USER, _form(name="docx", display_name="Word 文档处理"))
+
 
 class TestQueries:
     async def test_page_and_selectable(self, service):
@@ -191,6 +255,29 @@ class TestQueries:
         # built-in names also take this path: existence is not leaked.
         with pytest.raises(SkillNotFoundError):
             await service.get_detail(TENANT, "not-exist")
+
+    async def test_hidden_skill_is_absent_for_business_but_manageable_by_super(self, service):
+        await service.create_from_form(TENANT, USER, _form())
+        await service.set_frontend_hidden(TENANT, "ji-du-cai-bao-fen-xi", True, USER)
+
+        public_page = await service.get_page(keyword=None, enabled=None, page=1, page_size=10)
+        assert public_page.total == 0
+        assert await service.get_selectable() == []
+        with pytest.raises(SkillNotFoundError):
+            await service.get_detail(TENANT, "ji-du-cai-bao-fen-xi")
+
+        admin_page = await service.get_page(
+            keyword=None,
+            enabled=None,
+            page=1,
+            page_size=10,
+            can_configure_frontend_hidden=True,
+        )
+        assert admin_page.can_configure_frontend_hidden is True
+        assert admin_page.data[0].frontend_hidden is True
+        detail = await service.get_detail(TENANT, "ji-du-cai-bao-fen-xi", allow_hidden=True)
+        assert detail.frontend_hidden is True
+        service_module.AuditLogDao.ainsert_v2.assert_awaited_once()
 
     async def test_read_bundle_file(self, service):
         data = _zip_bytes({"SKILL.md": _md_bytes(), "reference/a.md": b"# ref"})

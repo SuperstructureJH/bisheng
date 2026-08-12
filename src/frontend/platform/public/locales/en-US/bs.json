@@ -2623,6 +2623,7 @@
       "displayName": "Display Name",
       "description": "Description",
       "status": "Status",
+      "frontendHidden": "Hide in frontend",
       "updateTime": "Modified",
       "actions": "Actions"
     },
@@ -2634,6 +2635,8 @@
     "deleteConfirm": "End users will no longer be able to select this skill and it cannot be recovered. Delete \"{{name}}\"?",
     "enabledToast": "Enabled — immediately visible in the end-user picker",
     "disabledToast": "Disabled — removed from the end-user picker",
+    "frontendHiddenEnabledToast": "Hidden from business UI; the server will add it automatically in task mode",
+    "frontendHiddenDisabledToast": "Frontend hiding disabled; normal visibility and manual selection restored",
     "deleted": "Deleted",
     "saved": "Saved",
     "count": "{{count}} total",

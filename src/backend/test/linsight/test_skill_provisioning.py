@@ -2,13 +2,13 @@
 
 ``materialize_session_skills`` is the whitelist gate that replaced the dormant
 ``TenantSkillsMiddleware`` runtime filter: it copies only the
-``governance-enabled ∩ user-selected`` bundles into the session workspace
+``governance-enabled ∩ (user-selected ∪ frontend-hidden)`` bundles into the session workspace
 ``/skills/`` subtree. These tests pin the C3 contract semantics (moved here from
 ``test_skill_middleware``):
 
 - ``selected=["a"]``  → only governance-enabled selected names copied;
 - ``selected=[]``     → nothing copied (UI disabled all);
-- ``selected=None``   → every enabled skill copied (non-UI fallback);
+- ``selected=None``   → only enabled frontend-hidden skills copied;
 - a DB-disabled skill is never copied even if selected;
 - bundle bytes (incl. binary assets) are copied losslessly;
 - the on-disk source is tenant-scoped (cross-tenant read yields nothing).
@@ -105,6 +105,18 @@ def _patch_enabled(monkeypatch, names: set[str]) -> None:
         return [_EnabledSkill(n) for n in names]
 
     monkeypatch.setattr(skill_provisioning.LinsightSkillDao, "list_enabled", _fake_list_enabled)
+    _patch_hidden(monkeypatch, set())
+
+
+def _patch_hidden(monkeypatch, names: set[str]) -> None:
+    async def _fake_list_frontend_hidden_names():
+        return names
+
+    monkeypatch.setattr(
+        skill_provisioning.LinsightSkillPolicyDao,
+        "list_frontend_hidden_names",
+        _fake_list_frontend_hidden_names,
+    )
 
 
 ENABLED = {"biao-shu-zhuan-xie", "he-tong-shen-yue"}  # ting-yong-ji-neng disabled in DB
@@ -136,6 +148,25 @@ class TestGate:
         copied = await materialize_session_skills(backend, TENANT, None, store=store)
         assert copied == []
         assert backend.uploaded == []
+
+    async def test_empty_selection_still_copies_enabled_hidden_skill(self, monkeypatch, store, backend):
+        _patch_enabled(monkeypatch, ENABLED)
+        _patch_hidden(monkeypatch, {"he-tong-shen-yue"})
+        copied = await materialize_session_skills(backend, TENANT, [], store=store)
+        assert copied == ["he-tong-shen-yue"]
+        assert _copied_rel_paths(backend) == {"/skills/he-tong-shen-yue/SKILL.md"}
+
+    async def test_legacy_omission_still_copies_enabled_hidden_skill(self, monkeypatch, store, backend):
+        _patch_enabled(monkeypatch, ENABLED)
+        _patch_hidden(monkeypatch, {"he-tong-shen-yue"})
+        copied = await materialize_session_skills(backend, TENANT, None, store=store)
+        assert copied == ["he-tong-shen-yue"]
+
+    async def test_disabled_hidden_skill_is_not_copied(self, monkeypatch, store, backend):
+        _patch_enabled(monkeypatch, ENABLED)
+        _patch_hidden(monkeypatch, {"ting-yong-ji-neng"})
+        copied = await materialize_session_skills(backend, TENANT, [], store=store)
+        assert copied == []
 
     async def test_db_disabled_skill_never_copied_even_if_selected(self, monkeypatch, store, backend):
         _patch_enabled(monkeypatch, ENABLED)

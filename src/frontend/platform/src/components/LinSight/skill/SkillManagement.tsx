@@ -41,6 +41,7 @@ export function SkillManagement({ scopeVersion = 0, entryEnabled = false, onEntr
     const [keyword, setKeyword] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
     const [loading, setLoading] = useState(false);
+    const [canConfigureFrontendHidden, setCanConfigureFrontendHidden] = useState(false);
 
     const [uploadOpen, setUploadOpen] = useState(false);
     const [formOpen, setFormOpen] = useState(false);
@@ -57,6 +58,7 @@ export function SkillManagement({ scopeVersion = 0, entryEnabled = false, onEntr
         }).then(res => {
             setSkills(res.data);
             setTotal(res.total);
+            setCanConfigureFrontendHidden(Boolean(res.can_configure_frontend_hidden));
         }).finally(() => setLoading(false));
     }, []);
 
@@ -85,6 +87,24 @@ export function SkillManagement({ scopeVersion = 0, entryEnabled = false, onEntr
                 toast({ variant: 'success', description: enabled ? t('skillManage.enabledToast') : t('skillManage.disabledToast') });
             } else {
                 setSkills(prev => prev.map(s => s.name === skill.name ? { ...s, enabled: !enabled } : s));
+            }
+        });
+    };
+
+    const handleFrontendHiddenToggle = (skill: SkillBrief, frontendHidden: boolean) => {
+        // The server remains authoritative: hidden Skills are injected at task
+        // startup even though the client picker no longer receives them.
+        setSkills(prev => prev.map(s => s.name === skill.name ? { ...s, frontend_hidden: frontendHidden } : s));
+        captureAndAlertRequestErrorHoc(skillApi.setSkillFrontendHidden(skill.name, frontendHidden)).then(res => {
+            if (res) {
+                toast({
+                    variant: 'success',
+                    description: frontendHidden
+                        ? t('skillManage.frontendHiddenEnabledToast')
+                        : t('skillManage.frontendHiddenDisabledToast'),
+                });
+            } else {
+                setSkills(prev => prev.map(s => s.name === skill.name ? { ...s, frontend_hidden: !frontendHidden } : s));
             }
         });
     };
@@ -173,6 +193,9 @@ export function SkillManagement({ scopeVersion = 0, entryEnabled = false, onEntr
                             <TableHead className="w-56">{t('skillManage.columns.displayName')}</TableHead>
                             <TableHead>{t('skillManage.columns.description')}</TableHead>
                             <TableHead className="w-24">{t('skillManage.columns.status')}</TableHead>
+                            {canConfigureFrontendHidden && (
+                                <TableHead className="w-28">{t('skillManage.columns.frontendHidden')}</TableHead>
+                            )}
                             <TableHead className="w-40">{t('skillManage.columns.updateTime')}</TableHead>
                             <TableHead className="w-8" />
                         </TableRow>
@@ -180,7 +203,7 @@ export function SkillManagement({ scopeVersion = 0, entryEnabled = false, onEntr
                     <TableBody>
                         {skills.length === 0 && !loading && (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center text-muted-foreground py-10">{emptyHint}</TableCell>
+                                <TableCell colSpan={canConfigureFrontendHidden ? 6 : 5} className="text-center text-muted-foreground py-10">{emptyHint}</TableCell>
                             </TableRow>
                         )}
                         {skills.map(skill => (
@@ -202,6 +225,15 @@ export function SkillManagement({ scopeVersion = 0, entryEnabled = false, onEntr
                                 <TableCell onClick={(e) => e.stopPropagation()}>
                                     <Switch checked={skill.enabled} onCheckedChange={(checked) => handleToggle(skill, checked)} />
                                 </TableCell>
+                                {canConfigureFrontendHidden && (
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                        <Switch
+                                            checked={Boolean(skill.frontend_hidden)}
+                                            onCheckedChange={(checked) => handleFrontendHiddenToggle(skill, checked)}
+                                            aria-label={t('skillManage.columns.frontendHidden')}
+                                        />
+                                    </TableCell>
+                                )}
                                 <TableCell className="text-muted-foreground text-xs">
                                     {(skill.update_time ?? skill.create_time)?.replace('T', ' ').slice(0, 16) ?? '--'}
                                 </TableCell>

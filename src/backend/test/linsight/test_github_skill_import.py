@@ -246,6 +246,7 @@ class _FakeSkillDao:
 def service(tmp_path, monkeypatch):
     _FakeSkillDao.reset()
     monkeypatch.setattr(service_module, "LinsightSkillDao", _FakeSkillDao)
+    monkeypatch.setattr(service_module.LinsightSkillPolicyDao, "get_by_skill_name", AsyncMock(return_value=None))
     monkeypatch.setattr(service_module.PermissionService, "authorize", AsyncMock())
     return service_module.SkillService(store=SkillStore(root=tmp_path))
 

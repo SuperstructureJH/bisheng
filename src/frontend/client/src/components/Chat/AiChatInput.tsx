@@ -15,7 +15,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useRecoilValue, useRecoilState } from "recoil";
 import { File_Accept } from "~/common";
-import { SkillSelector } from "~/components/Linsight/Input/SkillSelector";
+import { SkillSelector, useSanitizeSelectedSkills } from "~/components/Linsight/Input/SkillSelector";
 import { taskModeSkillsState } from "~/store/linsight";
 import AgentToolSelector from "~/components/Chat/Input/AgentToolSelector";
 import { ChatToolDown } from "~/components/Chat/Input/ChatFormTools";
@@ -163,6 +163,7 @@ const AiChatInput = memo(
         // task session ('new'), then enters task mode (/linsight/new) where the
         // selection is refilled as a chip. Keyed 'new' to match the landing page.
         const [dailySkills, setDailySkills] = useRecoilState(taskModeSkillsState('new'));
+        useSanitizeSelectedSkills(dailySkills, setDailySkills, taskModeEntry || taskMode);
 
         // Exiting task mode discards the skill selection so the panel's checkboxes
         // reset in sync with the (now-hidden) skill chips. Track the previous value

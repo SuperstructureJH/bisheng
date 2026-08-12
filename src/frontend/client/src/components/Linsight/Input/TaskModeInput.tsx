@@ -47,6 +47,7 @@ import { ContextChips } from './ContextChips';
 import { KnowledgeSpaceSelect } from './KnowledgeSpaceSelect';
 import { ModelSelector } from './ModelSelector';
 import { PlusMenu } from './PlusMenu';
+import { useSanitizeSelectedSkills } from './SkillSelector';
 import { TaskModeToggle } from './TaskModeToggle';
 import { ToolsSelect } from './ToolsSelect';
 
@@ -86,6 +87,7 @@ export function TaskModeInput({ conversationId = 'new', disabled = false, onFoll
     const sessionKey = conversationId || 'new';
     const [context, setContext] = useRecoilState(taskModeContextState(sessionKey));
     const [skills, setSkills] = useRecoilState(taskModeSkillsState(sessionKey));
+    useSanitizeSelectedSkills(skills, setSkills);
 
     const [text, setText] = useState('');
     const [model, setModel] = useState('');

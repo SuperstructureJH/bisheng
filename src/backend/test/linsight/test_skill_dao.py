@@ -11,7 +11,12 @@ from sqlalchemy.pool import StaticPool
 
 import bisheng.linsight.domain.models.linsight_skill as model_module
 from bisheng.core.context.tenant import set_current_tenant_id
-from bisheng.linsight.domain.models.linsight_skill import LinsightSkill, LinsightSkillDao
+from bisheng.linsight.domain.models.linsight_skill import (
+    LinsightSkill,
+    LinsightSkillDao,
+    LinsightSkillPolicy,
+    LinsightSkillPolicyDao,
+)
 
 TENANT = 1
 
@@ -38,6 +43,7 @@ async def dao(monkeypatch):
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     async with engine.begin() as conn:
         await conn.run_sync(LinsightSkill.__table__.create)
+        await conn.run_sync(LinsightSkillPolicy.__table__.create)
 
     @asynccontextmanager
     async def _session():
@@ -88,6 +94,15 @@ class TestSkillDao:
         assert (await dao.get_by_name("biao-shu")).description == "new desc"
         assert await dao.delete_by_name("biao-shu") is True
         assert await dao.delete_by_name("biao-shu") is False
+
+    async def test_frontend_hidden_policy_filters_business_queries(self, dao):
+        await dao.create(_skill("docx", "Word 文档处理"))
+        before, policy = await LinsightSkillPolicyDao.set_frontend_hidden("docx", True, updated_by=7)
+        assert before is False and bool(policy.frontend_hidden) is True
+        assert await LinsightSkillPolicyDao.list_frontend_hidden_names() == {"docx"}
+        assert (await dao.get_page(include_frontend_hidden=False))[1] == 0
+        assert await dao.list_enabled(include_frontend_hidden=False) == []
+        assert [s.name for s in await dao.list_enabled()] == ["docx"]
 
     def test_model_registered_for_tenant_filter(self):
         # Cross-tenant isolation is enforced by the do_orm_execute listener

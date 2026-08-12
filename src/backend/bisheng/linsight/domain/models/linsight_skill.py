@@ -16,6 +16,7 @@ from bisheng.database.base import async_get_count
 # Skill source markers (C3/C7 contract).
 SKILL_SOURCE_MANUAL = "manual"
 SKILL_SOURCE_SOP_MIGRATED = "sop_migrated"
+SKILL_SOURCE_PRESET = "preset"
 
 
 class LinsightSkillBase(SQLModelSerializable):
@@ -89,6 +90,115 @@ class LinsightSkill(LinsightSkillBase, table=True):
     id: int | None = Field(default=None, primary_key=True, description="Skill unique id")
 
 
+class LinsightSkillPolicyBase(SQLModelSerializable):
+    """Tenant-scoped presentation/runtime policy for a Skill (F056).
+
+    Policy is intentionally stored separately from ``linsight_skill``.  The
+    original table is shared with earlier release lines and has no linear
+    migration head in all supported deployments; a standalone table keeps the
+    customer-scoped increment reversible and lets SQLModel's normal startup
+    ``create_all`` path provision it safely.
+    """
+
+    tenant_id: int = Field(
+        default=1,
+        sa_column=Column(Integer, nullable=False, server_default=text("1"), index=True, comment="Tenant ID"),
+    )
+    skill_name: str = Field(
+        ...,
+        sa_column=Column(String(64), nullable=False, comment="Skill name"),
+    )
+    frontend_hidden: bool = Field(
+        default=False,
+        description="Hide from business UI while retaining server-side runtime injection",
+        sa_column=Column(
+            "frontend_hidden",
+            Integer,
+            nullable=False,
+            server_default=text("0"),
+            comment="Business-frontend hidden flag",
+        ),
+    )
+    updated_by: int | None = Field(
+        default=None,
+        sa_column=Column(Integer, nullable=True, comment="Last operator user id"),
+    )
+    create_time: datetime = Field(
+        default_factory=datetime.now,
+        sa_column=Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")),
+    )
+    update_time: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime, nullable=True, server_default=UPDATE_TIME_SERVER_DEFAULT),
+    )
+
+
+class LinsightSkillPolicy(LinsightSkillPolicyBase, table=True):
+    __tablename__ = "linsight_skill_policy"
+    __table_args__ = (UniqueConstraint("tenant_id", "skill_name", name="uq_linsight_skill_policy_tenant_name"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+
+
+class LinsightSkillPolicyDao:
+    """Strict-tenant policy reads and writes.
+
+    Absence of a row is the backward-compatible default ``frontend_hidden =
+    false``.  Only explicit hidden policies therefore change runtime behavior.
+    """
+
+    @classmethod
+    async def get_by_skill_name(cls, skill_name: str) -> LinsightSkillPolicy | None:
+        with strict_tenant_filter():
+            async with get_async_db_session() as session:
+                result = await session.exec(
+                    select(LinsightSkillPolicy).where(LinsightSkillPolicy.skill_name == skill_name)
+                )
+                return result.first()
+
+    @classmethod
+    async def list_frontend_hidden_names(cls) -> set[str]:
+        with strict_tenant_filter():
+            async with get_async_db_session() as session:
+                result = await session.exec(
+                    select(LinsightSkillPolicy.skill_name).where(
+                        LinsightSkillPolicy.frontend_hidden == True  # noqa: E712
+                    )
+                )
+                return set(result.all())
+
+    @classmethod
+    async def set_frontend_hidden(
+        cls,
+        skill_name: str,
+        frontend_hidden: bool,
+        updated_by: int,
+    ) -> tuple[bool, LinsightSkillPolicy]:
+        tid = get_current_tenant_id() or DEFAULT_TENANT_ID
+        with strict_tenant_filter():
+            async with get_async_db_session() as session:
+                result = await session.exec(
+                    select(LinsightSkillPolicy).where(LinsightSkillPolicy.skill_name == skill_name)
+                )
+                policy = result.first()
+                previous = bool(policy.frontend_hidden) if policy else False
+                if policy is None:
+                    policy = LinsightSkillPolicy(
+                        tenant_id=tid,
+                        skill_name=skill_name,
+                        frontend_hidden=frontend_hidden,
+                        updated_by=updated_by,
+                    )
+                else:
+                    policy.frontend_hidden = frontend_hidden
+                    policy.updated_by = updated_by
+                    policy.update_time = datetime.now()
+                session.add(policy)
+                await session.commit()
+                await session.refresh(policy)
+                return previous, policy
+
+
 class LinsightSkillDao:
     """Data access for tenant custom skills.
 
@@ -142,8 +252,13 @@ class LinsightSkillDao:
         enabled: bool | None = None,
         page: int = 1,
         page_size: int = 10,
+        include_frontend_hidden: bool = True,
     ) -> tuple[list[LinsightSkill], int]:
         statement = select(LinsightSkill)
+        if not include_frontend_hidden:
+            hidden_names = await LinsightSkillPolicyDao.list_frontend_hidden_names()
+            if hidden_names:
+                statement = statement.where(col(LinsightSkill.name).not_in(hidden_names))
         if keyword:
             pattern = f"%{keyword}%"
             statement = statement.where(
@@ -166,10 +281,15 @@ class LinsightSkillDao:
                 return list(result.all()), total
 
     @classmethod
-    async def list_enabled(cls) -> list[LinsightSkill]:
+    async def list_enabled(cls, include_frontend_hidden: bool = True) -> list[LinsightSkill]:
+        hidden_names = set()
+        if not include_frontend_hidden:
+            hidden_names = await LinsightSkillPolicyDao.list_frontend_hidden_names()
         with strict_tenant_filter():
             async with get_async_db_session() as session:
                 statement = select(LinsightSkill).where(LinsightSkill.enabled == True)  # noqa: E712
+                if hidden_names:
+                    statement = statement.where(col(LinsightSkill.name).not_in(hidden_names))
                 statement = statement.order_by(col(LinsightSkill.create_time).desc())
                 result = await session.exec(statement)
                 return list(result.all())
@@ -200,6 +320,12 @@ class LinsightSkillDao:
                 skill = result.first()
                 if not skill:
                     return False
+                policy_result = await session.exec(
+                    select(LinsightSkillPolicy).where(LinsightSkillPolicy.skill_name == name)
+                )
+                policy = policy_result.first()
+                if policy:
+                    await session.delete(policy)
                 await session.delete(skill)
                 await session.commit()
                 return True

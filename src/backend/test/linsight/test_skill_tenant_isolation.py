@@ -28,7 +28,7 @@ from bisheng.core.context.tenant import (
     set_visible_tenant_ids,
     visible_tenant_ids,
 )
-from bisheng.linsight.domain.models.linsight_skill import LinsightSkill, LinsightSkillDao
+from bisheng.linsight.domain.models.linsight_skill import LinsightSkill, LinsightSkillDao, LinsightSkillPolicy
 
 ROOT = 1
 LEAF = 2
@@ -80,6 +80,7 @@ async def dao(monkeypatch):
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     async with engine.begin() as conn:
         await conn.run_sync(LinsightSkill.__table__.create)
+        await conn.run_sync(LinsightSkillPolicy.__table__.create)
 
     @asynccontextmanager
     async def _session():

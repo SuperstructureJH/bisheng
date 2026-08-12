@@ -19,15 +19,37 @@ interface SkillSelectorProps {
     onChange: (skills: TaskModeSkill[]) => void;
 }
 
+function useSelectableSkills(enabled = true) {
+    return useQuery({
+        queryKey: ['linsightSelectableSkills'],
+        queryFn: getSelectableSkills,
+        enabled,
+        staleTime: 0,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
+    });
+}
+
+/** Remove selections retained by an old page/session cache after a Skill is hidden. */
+export function useSanitizeSelectedSkills(
+    selected: TaskModeSkill[],
+    onChange: (skills: TaskModeSkill[]) => void,
+    enabled = true,
+) {
+    const { data: skills = [], isSuccess } = useSelectableSkills(enabled);
+    useEffect(() => {
+        if (!enabled || !isSuccess || selected.length === 0) return;
+        const selectable = new Set(skills.map((skill) => skill.name));
+        const next = selected.filter((skill) => selectable.has(skill.name));
+        if (next.length !== selected.length) onChange(next);
+    }, [enabled, isSuccess, onChange, selected, skills]);
+}
+
 export function SkillSelector({ selected, onChange }: SkillSelectorProps) {
     const localize = useLocalize();
     const [keyword, setKeyword] = useState('');
-    const { data: skills = [], isFetching, isFetched } = useQuery({
-        queryKey: ['linsightSelectableSkills'],
-        queryFn: getSelectableSkills,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-    });
+    const { data: skills = [], isFetching, isFetched } = useSelectableSkills();
 
     // The hosting submenu popup auto-fits its content between min/max clamps;
     // freeze that width once the first skill batch renders so search filtering

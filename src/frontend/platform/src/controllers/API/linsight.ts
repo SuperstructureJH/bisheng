@@ -8,7 +8,9 @@ export interface SkillBrief {
   display_name: string;
   description: string;
   enabled: boolean;
-  source: 'manual' | 'sop_migrated';
+  source: 'manual' | 'sop_migrated' | 'preset';
+  /** Returned only to global super admins in the management surface. */
+  frontend_hidden?: boolean;
   create_time?: string;
   update_time?: string;
 }
@@ -27,6 +29,7 @@ export interface SkillDetail extends SkillBrief {
 export interface SkillPage {
   data: SkillBrief[];
   total: number;
+  can_configure_frontend_hidden?: boolean;
 }
 
 export interface SkillFormPayload {
@@ -78,6 +81,12 @@ export const skillApi = {
 
   setSkillStatus: (name: string, enabled: boolean) => {
     return axios.patch(`${SKILL_BASE}/${encodeURIComponent(name)}/status`, { enabled });
+  },
+
+  setSkillFrontendHidden: (name: string, frontendHidden: boolean) => {
+    return axios.patch(`${SKILL_BASE}/${encodeURIComponent(name)}/frontend-hidden`, {
+      frontend_hidden: frontendHidden,
+    });
   },
 
   deleteSkill: (name: string) => {

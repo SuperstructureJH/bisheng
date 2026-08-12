@@ -19,11 +19,13 @@ from bisheng.common.errcode.linsight import (
     SkillNotFoundError,
     SkillValidationError,
 )
-from bisheng.common.schemas.api import PageData
+from bisheng.database.models.audit_log import AuditLogDao
 from bisheng.linsight.domain.models.linsight_skill import (
     SKILL_SOURCE_MANUAL,
+    SKILL_SOURCE_PRESET,
     LinsightSkill,
     LinsightSkillDao,
+    LinsightSkillPolicyDao,
 )
 from bisheng.linsight.domain.schemas.skill_schema import (
     SkillBrief,
@@ -31,6 +33,7 @@ from bisheng.linsight.domain.schemas.skill_schema import (
     SkillDetail,
     SkillFileContent,
     SkillFileEntry,
+    SkillPage,
     SkillSelectable,
 )
 from bisheng.linsight.domain.services.github_skill_fetcher import fetch_skill_files, parse_github_url
@@ -66,22 +69,47 @@ class SkillService:
 
     # ------------------------------------------------------------- queries --
     async def get_page(
-        self, keyword: str | None, enabled: bool | None, page: int, page_size: int
-    ) -> PageData[SkillBrief]:
+        self,
+        keyword: str | None,
+        enabled: bool | None,
+        page: int,
+        page_size: int,
+        can_configure_frontend_hidden: bool = False,
+    ) -> SkillPage:
         skills, total = await LinsightSkillDao.get_page(
-            keyword=keyword, enabled=enabled, page=page, page_size=page_size
+            keyword=keyword,
+            enabled=enabled,
+            page=page,
+            page_size=page_size,
+            include_frontend_hidden=can_configure_frontend_hidden,
         )
-        return PageData(data=[SkillBrief.from_model(s) for s in skills], total=total)
+        hidden_names = (
+            await LinsightSkillPolicyDao.list_frontend_hidden_names()
+            if can_configure_frontend_hidden
+            else set()
+        )
+        return SkillPage(
+            data=[
+                SkillBrief.from_model(s, frontend_hidden=s.name in hidden_names)
+                for s in skills
+            ],
+            total=total,
+            can_configure_frontend_hidden=can_configure_frontend_hidden,
+        )
 
     async def get_selectable(self) -> list[SkillSelectable]:
-        skills = await LinsightSkillDao.list_enabled()
+        skills = await LinsightSkillDao.list_enabled(include_frontend_hidden=False)
         return [
             SkillSelectable(name=s.name, display_name=s.display_name or s.name, description=s.description)
             for s in skills
         ]
 
-    async def get_detail(self, tenant_id: int, name: str) -> SkillDetail:
-        skill = await self._get_or_404(name)
+    async def get_detail(self, tenant_id: int, name: str, allow_hidden: bool = False) -> SkillDetail:
+        skill = await self._get_or_404(name, allow_hidden=allow_hidden)
+        frontend_hidden = None
+        if allow_hidden:
+            policy = await LinsightSkillPolicyDao.get_by_skill_name(name)
+            frontend_hidden = bool(policy and policy.frontend_hidden)
         try:
             source_text = self.store.read_text(tenant_id, name)
             _, body = parse_skill_md(source_text)
@@ -90,15 +118,21 @@ class SkillService:
             logger.warning("skill disk read failed for {}: {}", name, exc)
             source_text, body = "", ""
         detail = SkillDetail(
-            **SkillBrief.from_model(skill).model_dump(),
+            **SkillBrief.from_model(skill, frontend_hidden=frontend_hidden).model_dump(),
             preview=body.strip(),
             source_text=source_text,
             files=[SkillFileEntry(**e) for e in self.store.list_files(tenant_id, name)],
         )
         return detail
 
-    async def read_bundle_file(self, tenant_id: int, name: str, path: str) -> SkillFileContent:
-        await self._get_or_404(name)
+    async def read_bundle_file(
+        self,
+        tenant_id: int,
+        name: str,
+        path: str,
+        allow_hidden: bool = False,
+    ) -> SkillFileContent:
+        await self._get_or_404(name, allow_hidden=allow_hidden)
         try:
             content = self.store.read_text(tenant_id, name, path)
         except ValueError:
@@ -134,8 +168,14 @@ class SkillService:
         name, display_name, description = self._extract_meta(files)
         return await self._create(tenant_id, user_id, name, display_name, description, files)
 
-    async def update_from_form(self, tenant_id: int, name: str, form: SkillCreateForm) -> SkillDetail:
-        skill = await self._get_or_404(name)
+    async def update_from_form(
+        self,
+        tenant_id: int,
+        name: str,
+        form: SkillCreateForm,
+        allow_hidden: bool = False,
+    ) -> SkillDetail:
+        skill = await self._get_or_404(name, allow_hidden=allow_hidden)
         if form.name != name:
             raise SkillValidationError(msg="skill ID cannot be changed when editing")
         self._validate_fields(form.name, form.display_name, form.description)
@@ -149,11 +189,18 @@ class SkillService:
         size = self.store.write_bundle(tenant_id, name, files)
         skill.display_name, skill.description, skill.size = form.display_name, form.description, size
         await LinsightSkillDao.update(skill)
-        return await self.get_detail(tenant_id, name)
+        return await self.get_detail(tenant_id, name, allow_hidden=allow_hidden)
 
-    async def update_from_upload(self, tenant_id: int, name: str, filename: str, data: bytes) -> SkillDetail:
+    async def update_from_upload(
+        self,
+        tenant_id: int,
+        name: str,
+        filename: str,
+        data: bytes,
+        allow_hidden: bool = False,
+    ) -> SkillDetail:
         """Whole-bundle replacement; frontmatter name must equal the path name."""
-        skill = await self._get_or_404(name)
+        skill = await self._get_or_404(name, allow_hidden=allow_hidden)
         new_name, display_name, description, files = self._parse_upload(filename, data)
         if new_name != name:
             raise SkillValidationError(msg=f"frontmatter name '{new_name}' must equal skill ID '{name}'")
@@ -161,24 +208,132 @@ class SkillService:
         size = self.store.write_bundle(tenant_id, name, files)
         skill.display_name, skill.description, skill.size = display_name, description, size
         await LinsightSkillDao.update(skill)
-        return await self.get_detail(tenant_id, name)
+        return await self.get_detail(tenant_id, name, allow_hidden=allow_hidden)
 
-    async def set_status(self, name: str, enabled: bool) -> None:
+    async def set_status(self, name: str, enabled: bool, allow_hidden: bool = False) -> None:
+        await self._get_or_404(name, allow_hidden=allow_hidden)
         if not await LinsightSkillDao.set_enabled(name, enabled):
             raise SkillNotFoundError()
 
-    async def delete(self, tenant_id: int, name: str) -> None:
-        skill = await self._get_or_404(name)
+    async def set_frontend_hidden(
+        self,
+        tenant_id: int,
+        name: str,
+        frontend_hidden: bool,
+        operator_id: int,
+    ) -> SkillBrief:
+        skill = await self._get_or_404(name, allow_hidden=True)
+        previous, _ = await LinsightSkillPolicyDao.set_frontend_hidden(
+            skill_name=name,
+            frontend_hidden=frontend_hidden,
+            updated_by=operator_id,
+        )
+        await AuditLogDao.ainsert_v2(
+            tenant_id=tenant_id,
+            operator_id=operator_id,
+            operator_tenant_id=tenant_id,
+            action="linsight.skill.frontend_hidden.update",
+            target_type=SKILL_OBJECT_TYPE,
+            target_id=str(skill.id),
+            object_name=skill.display_name or skill.name,
+            metadata={
+                "skill_name": skill.name,
+                "before": previous,
+                "after": frontend_hidden,
+                "scope": {"type": "tenant", "tenant_id": tenant_id},
+            },
+        )
+        return SkillBrief.from_model(skill, frontend_hidden=frontend_hidden)
+
+    async def provision_preset(
+        self,
+        tenant_id: int,
+        operator_id: int,
+        form: SkillCreateForm,
+    ) -> tuple[SkillBrief, str]:
+        """Idempotently provision one system preset through the F035 service.
+
+        Customer initialization scripts call this method rather than writing
+        ``linsight_skill`` directly, preserving the owning domain's validation,
+        bundle lifecycle and owner-grant behavior. A same-ID tenant-authored
+        Skill is never overwritten.
+        """
+        existing = await LinsightSkillDao.get_by_name(form.name)
+        if existing and existing.source != SKILL_SOURCE_PRESET:
+            raise SkillValidationError(
+                msg=f"refusing to overwrite non-preset skill '{form.name}' (source={existing.source})"
+            )
+        if existing:
+            await self.update_from_form(
+                tenant_id,
+                form.name,
+                form,
+                allow_hidden=True,
+            )
+            await self.set_status(form.name, True, allow_hidden=True)
+            operation = "updated"
+        else:
+            await self._create(
+                tenant_id,
+                operator_id,
+                form.name,
+                form.display_name,
+                form.description,
+                {
+                    SKILL_MD: compose_skill_md(
+                        name=form.name,
+                        description=form.description,
+                        body=form.content,
+                        display_name=form.display_name,
+                    ).encode("utf-8")
+                },
+                source=SKILL_SOURCE_PRESET,
+            )
+            operation = "created"
+
+        brief = await self.set_frontend_hidden(
+            tenant_id=tenant_id,
+            name=form.name,
+            frontend_hidden=True,
+            operator_id=operator_id,
+        )
+        await AuditLogDao.ainsert_v2(
+            tenant_id=tenant_id,
+            operator_id=operator_id,
+            operator_tenant_id=tenant_id,
+            action="linsight.skill.preset.provision",
+            target_type=SKILL_OBJECT_TYPE,
+            target_id=str(brief.id),
+            object_name=brief.display_name,
+            metadata={
+                "skill_name": brief.name,
+                "operation": operation,
+                "frontend_hidden": True,
+                "enabled": True,
+                "scope": {"type": "tenant", "tenant_id": tenant_id},
+            },
+        )
+        return brief, operation
+
+    async def delete(self, tenant_id: int, name: str, allow_hidden: bool = False) -> None:
+        skill = await self._get_or_404(name, allow_hidden=allow_hidden)
         await LinsightSkillDao.delete_by_name(name)
         if not self.store.delete(tenant_id, name):
             logger.warning("skill dir missing on delete: tenant={} name={}", tenant_id, skill.name)
 
     # ----------------------------------------------------------- internals --
-    async def _get_or_404(self, name: str) -> LinsightSkill:
+    async def _get_or_404(self, name: str, allow_hidden: bool = False) -> LinsightSkill:
         skill = await LinsightSkillDao.get_by_name(name)
         if not skill:
             # built-in names also land here: 404 without leaking existence (design §7.5).
             raise SkillNotFoundError()
+        if not allow_hidden:
+            policy = await LinsightSkillPolicyDao.get_by_skill_name(name)
+            if policy and policy.frontend_hidden:
+                # Tenant admins and business callers receive the same answer as
+                # an unknown Skill; this prevents known-ID probing from exposing
+                # hidden identity or configuration.
+                raise SkillNotFoundError()
         return skill
 
     def _parse_upload(self, filename: str, data: bytes) -> tuple[str, str, str, dict[str, bytes]]:
@@ -250,6 +405,7 @@ class SkillService:
         display_name: str,
         description: str,
         files: dict[str, bytes],
+        source: str = SKILL_SOURCE_MANUAL,
     ) -> SkillDetail:
         self._validate_fields(name, display_name, description)
         await self._check_duplicate(name, display_name)
@@ -260,7 +416,7 @@ class SkillService:
             display_name=display_name,
             description=description,
             enabled=True,
-            source=SKILL_SOURCE_MANUAL,
+            source=source,
             object_path=self.store.object_path(tenant_id, name),
             size=size,
             created_by=user_id,

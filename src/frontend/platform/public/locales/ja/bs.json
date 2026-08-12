@@ -2568,6 +2568,7 @@
       "displayName": "表示名",
       "description": "説明",
       "status": "状態",
+      "frontendHidden": "フロントで非表示",
       "updateTime": "更新日時",
       "actions": "操作"
     },
@@ -2579,6 +2580,8 @@
     "deleteConfirm": "削除するとエンドユーザーは選択できなくなり、復元できません。「{{name}}」を削除しますか？",
     "enabledToast": "有効化しました。エンドユーザーの選択リストに即時表示されます",
     "disabledToast": "無効化しました。エンドユーザーの選択リストから削除されました",
+    "frontendHiddenEnabledToast": "業務画面で非表示になり、タスクモードではサーバーが自動追加します",
+    "frontendHiddenDisabledToast": "非表示設定を解除し、通常の表示と手動選択を復元しました",
     "deleted": "削除しました",
     "saved": "保存しました",
     "count": "全 {{count}} 件",

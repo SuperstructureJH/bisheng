@@ -10,16 +10,18 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 
 from bisheng.common.dependencies.user_deps import UserPayload
-from bisheng.common.errcode.linsight import SkillFileTooLargeError, SkillValidationError
+from bisheng.common.errcode.linsight import SkillFileTooLargeError, SkillPermissionError, SkillValidationError
 from bisheng.common.schemas.api import UnifiedResponseModel, resp_200
 from bisheng.core.context.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
 from bisheng.linsight.domain.schemas.skill_schema import (
     SkillCreateForm,
+    SkillFrontendHiddenUpdate,
     SkillGitHubImportRequest,
     SkillStatusUpdate,
 )
 from bisheng.linsight.domain.services.skill_service import SkillService
 from bisheng.linsight.domain.services.skill_store import MAX_BUNDLE_SIZE, slugify_pinyin
+from bisheng.utils.http_middleware import _check_is_global_super
 
 router = APIRouter(prefix="/skill", tags=["LinsightSkill"])
 
@@ -33,6 +35,10 @@ async def _read_upload(file: UploadFile) -> bytes:
     if len(data) > MAX_BUNDLE_SIZE:
         raise SkillFileTooLargeError()
     return data
+
+
+async def _is_global_super(login_user: UserPayload) -> bool:
+    return await _check_is_global_super(int(login_user.user_id))
 
 
 def _require_form(
@@ -61,8 +67,18 @@ async def list_skills(
     page_size: int = Query(default=10, ge=1, le=100),
     login_user: UserPayload = Depends(UserPayload.get_tenant_admin_user),
 ) -> UnifiedResponseModel:
-    page_data = await SkillService().get_page(keyword=keyword, enabled=enabled, page=page, page_size=page_size)
-    return resp_200(page_data)
+    is_global_super = await _is_global_super(login_user)
+    page_data = await SkillService().get_page(
+        keyword=keyword,
+        enabled=enabled,
+        page=page,
+        page_size=page_size,
+        can_configure_frontend_hidden=is_global_super,
+    )
+    # ``frontend_hidden`` is super-admin-only.  ``exclude_none`` removes the
+    # field entirely for tenant-admin responses, rather than returning a value
+    # that can be used to infer hidden-policy support.
+    return resp_200(page_data.model_dump(exclude_none=True))
 
 
 @router.get("/selectable", summary="Enabled skills for the end-user picker")
@@ -86,7 +102,12 @@ async def get_skill(
     name: str,
     login_user: UserPayload = Depends(UserPayload.get_tenant_admin_user),
 ) -> UnifiedResponseModel:
-    return resp_200(await SkillService().get_detail(_current_tenant_id(), name))
+    detail = await SkillService().get_detail(
+        _current_tenant_id(),
+        name,
+        allow_hidden=await _is_global_super(login_user),
+    )
+    return resp_200(detail.model_dump(exclude_none=True))
 
 
 @router.get("/{name}/file", summary="Read a bundle asset (read-only)")
@@ -95,7 +116,14 @@ async def get_skill_file(
     path: str = Query(..., description="Bundle-relative file path"),
     login_user: UserPayload = Depends(UserPayload.get_tenant_admin_user),
 ) -> UnifiedResponseModel:
-    return resp_200(await SkillService().read_bundle_file(_current_tenant_id(), name, path))
+    return resp_200(
+        await SkillService().read_bundle_file(
+            _current_tenant_id(),
+            name,
+            path,
+            allow_hidden=await _is_global_super(login_user),
+        )
+    )
 
 
 @router.post("", summary="Create skill: multipart (.md/.zip/.skill) or form fields")
@@ -115,7 +143,7 @@ async def create_skill(
     else:
         form = _require_form(display_name, name, description, content)
         detail = await service.create_from_form(tenant_id, login_user.user_id, form)
-    return resp_200(detail)
+    return resp_200(detail.model_dump(exclude_none=True))
 
 
 @router.post("/import-github", summary="Import a skill from a public GitHub directory URL")
@@ -124,7 +152,7 @@ async def import_skill_from_github(
     login_user: UserPayload = Depends(UserPayload.get_tenant_admin_user),
 ) -> UnifiedResponseModel:
     detail = await SkillService().create_from_github(_current_tenant_id(), login_user.user_id, payload.url)
-    return resp_200(detail)
+    return resp_200(detail.model_dump(exclude_none=True))
 
 
 @router.put("/{name}", summary="Edit skill: form (SKILL.md only) or multipart (whole-bundle replace)")
@@ -138,13 +166,25 @@ async def update_skill(
 ) -> UnifiedResponseModel:
     service = SkillService()
     tenant_id = _current_tenant_id()
+    allow_hidden = await _is_global_super(login_user)
     if file is not None:
         data = await _read_upload(file)
-        detail = await service.update_from_upload(tenant_id, name, file.filename or "", data)
+        detail = await service.update_from_upload(
+            tenant_id,
+            name,
+            file.filename or "",
+            data,
+            allow_hidden=allow_hidden,
+        )
     else:
         form = _require_form(display_name, name, description, content)
-        detail = await service.update_from_form(tenant_id, name, form)
-    return resp_200(detail)
+        detail = await service.update_from_form(
+            tenant_id,
+            name,
+            form,
+            allow_hidden=allow_hidden,
+        )
+    return resp_200(detail.model_dump(exclude_none=True))
 
 
 @router.patch("/{name}/status", summary="Enable / disable skill")
@@ -153,8 +193,29 @@ async def set_skill_status(
     payload: SkillStatusUpdate,
     login_user: UserPayload = Depends(UserPayload.get_tenant_admin_user),
 ) -> UnifiedResponseModel:
-    await SkillService().set_status(name, payload.enabled)
+    await SkillService().set_status(
+        name,
+        payload.enabled,
+        allow_hidden=await _is_global_super(login_user),
+    )
     return resp_200({"ok": True})
+
+
+@router.patch("/{name}/frontend-hidden", summary="Configure business-frontend hiding (global super only)")
+async def set_skill_frontend_hidden(
+    name: str,
+    payload: SkillFrontendHiddenUpdate,
+    login_user: UserPayload = Depends(UserPayload.get_tenant_admin_user),
+) -> UnifiedResponseModel:
+    if not await _is_global_super(login_user):
+        raise SkillPermissionError()
+    skill = await SkillService().set_frontend_hidden(
+        tenant_id=_current_tenant_id(),
+        name=name,
+        frontend_hidden=payload.frontend_hidden,
+        operator_id=login_user.user_id,
+    )
+    return resp_200(skill)
 
 
 @router.delete("/{name}", summary="Delete skill (whole bundle dir)")
@@ -162,5 +223,9 @@ async def delete_skill(
     name: str,
     login_user: UserPayload = Depends(UserPayload.get_tenant_admin_user),
 ) -> UnifiedResponseModel:
-    await SkillService().delete(_current_tenant_id(), name)
+    await SkillService().delete(
+        _current_tenant_id(),
+        name,
+        allow_hidden=await _is_global_super(login_user),
+    )
     return resp_200({"ok": True})

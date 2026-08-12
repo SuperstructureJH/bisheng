@@ -19,11 +19,15 @@ class SkillBrief(BaseModel):
     description: str
     enabled: bool
     source: str
+    frontend_hidden: bool | None = Field(
+        default=None,
+        description="Super-admin-only business-frontend visibility policy",
+    )
     create_time: datetime | None = None
     update_time: datetime | None = None
 
     @classmethod
-    def from_model(cls, skill: LinsightSkill) -> SkillBrief:
+    def from_model(cls, skill: LinsightSkill, frontend_hidden: bool | None = None) -> SkillBrief:
         return cls(
             id=skill.id,
             name=skill.name,
@@ -31,6 +35,7 @@ class SkillBrief(BaseModel):
             description=skill.description,
             enabled=bool(skill.enabled),
             source=skill.source,
+            frontend_hidden=frontend_hidden,
             create_time=skill.create_time,
             # never-edited skills report their creation time as the modified time
             update_time=skill.update_time or skill.create_time,
@@ -43,6 +48,14 @@ class SkillSelectable(BaseModel):
     name: str
     display_name: str
     description: str
+
+
+class SkillPage(BaseModel):
+    """Management page plus the caller's visibility-policy capability."""
+
+    data: list[SkillBrief]
+    total: int
+    can_configure_frontend_hidden: bool = False
 
 
 class SkillFileEntry(BaseModel):
@@ -67,6 +80,10 @@ class SkillFileContent(BaseModel):
 
 class SkillStatusUpdate(BaseModel):
     enabled: bool
+
+
+class SkillFrontendHiddenUpdate(BaseModel):
+    frontend_hidden: bool
 
 
 class SkillCreateForm(BaseModel):

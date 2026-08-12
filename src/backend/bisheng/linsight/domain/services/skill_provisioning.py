@@ -17,10 +17,11 @@ by a ``FilesystemBackend`` over that cache can enumerate them (real on-disk dirs
 ``is_dir``-aware) and the model reads the very same ``/skills/<name>/SKILL.md``
 paths back through the workspace backend.
 
-The copy IS the whitelist gate (Fork X): only ``enabled (DB governance) ∩
-selected (this run)`` bundles are materialized, so the model physically cannot
-see a skill it was not granted — no per-run config key, no runtime filter. This
-replaces the dormant ``TenantSkillsMiddleware`` runtime whitelist.
+The copy IS the whitelist gate (Fork X): only governance-enabled bundles from
+``selected (this run) ∪ frontend-hidden (system forced)`` are materialized, so
+the model physically cannot see disabled or cross-tenant skills.  Hidden policy
+is resolved server-side; a stale client cannot omit it and a forged client
+cannot cancel it.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ import asyncio
 
 from loguru import logger
 
-from bisheng.linsight.domain.models.linsight_skill import LinsightSkillDao
+from bisheng.linsight.domain.models.linsight_skill import LinsightSkillDao, LinsightSkillPolicyDao
 from bisheng.linsight.domain.services.skill_store import SkillStore
 
 WORKSPACE_SKILLS_DIR = "skills"
@@ -55,30 +56,22 @@ async def materialize_session_skills(
     Args:
         backend: the session ``WorkspaceBackend`` (write-throughs to MinIO+cache).
         tenant_id: owning tenant; scopes the on-disk bundle source path.
-        selected: skill names picked for this run. Both ``None`` (field absent —
-            a legacy row, or any client/caller that never sent it) and ``[]`` (the
-            UI explicitly cleared the picker) mean "no skills this run": copy
-            nothing. Only an explicit non-empty list opts in, and each name is
-            still intersected with the tenant's governance-enabled set.
+        selected: skill names explicitly picked for this run. ``None`` and
+            ``[]`` both mean no user-selected skills, but enabled Skills with an
+            active ``frontend_hidden`` policy are still forced in by the server.
         store: skill disk store (injectable for tests).
 
     Returns:
         The skill names actually materialized. Empty when nothing matched — the
         caller then skips attaching the skills middleware entirely.
     """
-    # None ≡ [] ≡ "no skills for this run" — copy nothing. Treating a missing
-    # field as "copy every enabled skill" was a footgun: any request that omitted
-    # skills (a stale/cached client, a non-UI caller, a legacy row) silently
-    # loaded EVERY enabled skill, defeating the picker. Skills are strictly opt-in
-    # via an explicit name list.
-    if not selected:
-        return []
-
     store = store or SkillStore()
     # Governance gate, scoped to the current tenant (LinsightSkillDao.list_enabled
     # uses strict_tenant_filter); the worker has already restored tenant context.
     enabled = {skill.name for skill in await LinsightSkillDao.list_enabled()}
-    wanted = {name for name in selected if name in enabled}
+    frontend_hidden = await LinsightSkillPolicyDao.list_frontend_hidden_names()
+    requested = set(selected or [])
+    wanted = (requested | frontend_hidden) & enabled
     if not wanted:
         return []
 
@@ -89,21 +82,22 @@ async def materialize_session_skills(
             # off the worker's event loop so concurrent tasks aren't stalled.
             pairs = await asyncio.to_thread(_collect_bundle_pairs, store, tenant_id, name)
             if not pairs:
-                logger.warning("linsight skill %r (tenant %s) has no files on disk; skipping", name, tenant_id)
+                logger.warning("linsight skill {} (tenant {}) has no files on disk; skipping", name, tenant_id)
                 continue
             responses = await backend.aupload_files(pairs)
             failed = [r for r in responses if getattr(r, "error", None)]
             if failed:
-                logger.warning("linsight skill %r copy had failures, not advertising: %s", name, failed)
+                logger.warning("linsight skill {} copy had failures, not advertising: {}", name, failed)
                 continue
             copied.append(name)
         except Exception:
             # Best-effort: one malformed/unreadable bundle must never abort the task.
-            logger.exception("failed to materialize linsight skill %r (tenant %s)", name, tenant_id)
+            logger.exception("failed to materialize linsight skill {} (tenant {})", name, tenant_id)
     logger.info(
-        "linsight skill provisioning: tenant=%s selected=%r enabled=%s -> materialized %s",
+        "linsight skill provisioning: tenant={} selected={} forced_hidden={} enabled={} -> materialized={}",
         tenant_id,
         selected,
+        sorted(frontend_hidden),
         sorted(enabled),
         copied,
     )
