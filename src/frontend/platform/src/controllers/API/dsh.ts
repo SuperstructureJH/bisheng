@@ -13,6 +13,8 @@ import type {
     DshSeat,
     DshSeatQuery,
     DshSession,
+    DshUsageMetrics,
+    DshUsageTimeSummary,
 } from '@/types/dsh'
 
 const admin = '/api/v1/dsh/admin'
@@ -251,19 +253,121 @@ export async function getDshPolicy(
         throw malformed()
     return data
 }
+
+function validUsageMetrics(value: DshUsageMetrics): boolean {
+    if (!value || typeof value !== 'object') return false
+    const counts = [
+        value.message_count,
+        value.qa_count,
+        value.failed_count,
+        value.cancelled_count,
+        value.running_count,
+        value.usage_unknown_count,
+        value.recorded_usage_count,
+        value.missing_usage_count,
+    ]
+    if (counts.some((count) => !Number.isSafeInteger(count) || count < 0)) return false
+    if (
+        value.qa_count +
+            value.failed_count +
+            value.cancelled_count +
+            value.running_count +
+            value.usage_unknown_count !==
+            value.message_count ||
+        value.recorded_usage_count + value.missing_usage_count !== value.message_count
+    )
+        return false
+    const tokens = [value.input_tokens, value.output_tokens, value.total_tokens]
+    if (value.message_count > 0 && value.recorded_usage_count === 0) return tokens.every((amount) => amount === null)
+    if (tokens.some((amount) => !Number.isSafeInteger(amount) || Number(amount) < 0)) return false
+    return value.total_tokens === value.input_tokens! + value.output_tokens!
+}
+
+export async function getDshUsageTimeSummary(
+    userId: string,
+    range: { startAt: string; endAt: string; tenantId?: string },
+    signal?: AbortSignal,
+): Promise<DshUsageTimeSummary> {
+    const data: DshUsageTimeSummary = await request.get(`${admin}/users/${encodeURIComponent(userId)}/usage-summary`, {
+        params: {
+            start_at: range.startAt,
+            end_at: range.endAt,
+            tenant_id: range.tenantId,
+        },
+        signal,
+    })
+    const start = Date.parse(data?.start_at ?? '')
+    const end = Date.parse(data?.end_at ?? '')
+    const expectedStart = Date.parse(range.startAt)
+    const expectedEnd = Date.parse(range.endAt)
+    const maxPoints = data?.granularity === 'hour' ? 49 : 367
+    const points = Array.isArray(data?.points) ? data.points : []
+    const pointsAreContinuous = points.every((point, index) => {
+        const pointStart = Date.parse(point.start_at)
+        const pointEnd = Date.parse(point.end_at)
+        const previousEnd = index === 0 ? start : Date.parse(points[index - 1].end_at)
+        return (
+            validUsageMetrics(point) &&
+            Number.isFinite(pointStart) &&
+            Number.isFinite(pointEnd) &&
+            pointStart === previousEnd &&
+            pointEnd > pointStart &&
+            pointEnd <= end
+        )
+    })
+    const metricKeys = [
+        'message_count',
+        'qa_count',
+        'failed_count',
+        'cancelled_count',
+        'running_count',
+        'usage_unknown_count',
+        'recorded_usage_count',
+        'missing_usage_count',
+    ] as const
+    const totalsMatchPoints =
+        !!data?.totals &&
+        metricKeys.every((key) => points.reduce((total, point) => total + point[key], 0) === data.totals[key]) &&
+        (data.totals.total_tokens === null ||
+            ['input_tokens', 'output_tokens', 'total_tokens'].every(
+                (key) =>
+                    points.reduce(
+                        (total, point) => total + ((point[key as keyof typeof point] as number | null) ?? 0),
+                        0,
+                    ) === data.totals[key as keyof typeof data.totals],
+            ))
+    if (
+        !data ||
+        data.timezone !== 'Asia/Shanghai' ||
+        !['hour', 'day'].includes(data.granularity) ||
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
+        start !== expectedStart ||
+        end !== expectedEnd ||
+        !validUsageMetrics(data.totals) ||
+        points.length === 0 ||
+        points.length > maxPoints ||
+        !pointsAreContinuous ||
+        Date.parse(points.at(-1)?.end_at ?? '') !== end ||
+        !totalsMatchPoints
+    )
+        throw malformed()
+    return data
+}
 export async function saveDshPolicy(
     userId: string,
     modelId: number,
     tenantId: string,
     body: DshPolicyInput,
 ): Promise<DshOperation> {
-    if (typeof body.enabled !== 'boolean' || !Number.isSafeInteger(body.monthly_token_limit) || body.monthly_token_limit < 0) throw malformed()
-    const config = { params: { tenant_id: tenantId }, preserveError: true }
-    return await request.put(
-        `${admin}/users/${encodeURIComponent(userId)}/models/${modelId}/policy`,
-        body,
-        config,
+    if (
+        typeof body.enabled !== 'boolean' ||
+        !Number.isSafeInteger(body.monthly_token_limit) ||
+        body.monthly_token_limit < 0
     )
+        throw malformed()
+    const config = { params: { tenant_id: tenantId }, preserveError: true }
+    return await request.put(`${admin}/users/${encodeURIComponent(userId)}/models/${modelId}/policy`, body, config)
 }
 export async function commandDshSeat(
     userId: string,

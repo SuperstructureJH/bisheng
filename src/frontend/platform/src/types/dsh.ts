@@ -146,3 +146,31 @@ export type DshModelAccessPage = DshPage<DshModelAccessUser> & {
     tenant_id: number
     model: { id: number; name: string; is_root_shared: boolean }
 }
+
+export type DshUsageMetrics = {
+    message_count: number
+    qa_count: number
+    failed_count: number
+    cancelled_count: number
+    running_count: number
+    usage_unknown_count: number
+    recorded_usage_count: number
+    missing_usage_count: number
+    input_tokens: number | null
+    output_tokens: number | null
+    total_tokens: number | null
+}
+
+export type DshUsageTimeBucket = DshUsageMetrics & {
+    start_at: string
+    end_at: string
+}
+
+export type DshUsageTimeSummary = {
+    start_at: string
+    end_at: string
+    timezone: 'Asia/Shanghai'
+    granularity: 'hour' | 'day'
+    totals: DshUsageMetrics
+    points: DshUsageTimeBucket[]
+}

@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from bisheng.dsh.domain.schemas.contracts import DshContract, NonnegativeInt, SubjectId
 
@@ -95,6 +95,62 @@ class LastCallSnapshot(DshContract):
     projected_at: str | None
 
     @field_validator("started_at", "finished_at", "projected_at")
+    @classmethod
+    def timestamp(cls, value):
+        return SeatItem.timestamp(value)
+
+
+class UsageMetrics(DshContract):
+    message_count: NonnegativeInt
+    qa_count: NonnegativeInt
+    failed_count: NonnegativeInt
+    cancelled_count: NonnegativeInt
+    running_count: NonnegativeInt
+    usage_unknown_count: NonnegativeInt
+    recorded_usage_count: NonnegativeInt
+    missing_usage_count: NonnegativeInt
+    input_tokens: NonnegativeInt | None
+    output_tokens: NonnegativeInt | None
+    total_tokens: NonnegativeInt | None
+
+    @model_validator(mode="after")
+    def consistent_counts_and_tokens(self):
+        if (
+            self.qa_count + self.failed_count + self.cancelled_count + self.running_count + self.usage_unknown_count
+            != self.message_count
+        ):
+            raise ValueError("Message status counts must equal the total")
+        if self.recorded_usage_count + self.missing_usage_count != self.message_count:
+            raise ValueError("Usage evidence counts must equal the total")
+        tokens = (self.input_tokens, self.output_tokens, self.total_tokens)
+        usage_is_unknown = self.message_count > 0 and self.recorded_usage_count == 0
+        if usage_is_unknown:
+            if any(value is not None for value in tokens):
+                raise ValueError("Token totals remain unknown without recorded usage")
+        elif any(value is None for value in tokens) or self.total_tokens != self.input_tokens + self.output_tokens:
+            raise ValueError("Recorded token totals must be complete and consistent")
+        return self
+
+
+class UsageTimeBucket(UsageMetrics):
+    start_at: str
+    end_at: str
+
+    @field_validator("start_at", "end_at")
+    @classmethod
+    def timestamp(cls, value):
+        return SeatItem.timestamp(value)
+
+
+class UsageTimeSummary(DshContract):
+    start_at: str
+    end_at: str
+    timezone: Literal["Asia/Shanghai"]
+    granularity: Literal["hour", "day"]
+    totals: UsageMetrics
+    points: list[UsageTimeBucket]
+
+    @field_validator("start_at", "end_at")
     @classmethod
     def timestamp(cls, value):
         return SeatItem.timestamp(value)

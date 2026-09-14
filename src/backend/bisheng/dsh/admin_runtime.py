@@ -166,6 +166,7 @@ async def get_admin_runtime(runtime, *, quota=None, usage=None):
         now=now,
         model_users_view=read_model_users,
         model_policy_view=read_model_policy,
+        usage_summary_view=read_usage_time_summary,
     )
     result = AdminRuntime(
         admin,
@@ -365,6 +366,24 @@ async def read_last_call(user_id):
     def read():
         with get_sync_db_session() as session:
             return DshAdminQueryRepository(session).last_call(user_id)
+
+    return await asyncio.to_thread(read)
+
+
+async def read_usage_time_summary(user_id, start_at, end_at, granularity):
+    import asyncio
+
+    from bisheng.core.database import get_sync_db_session
+    from bisheng.dsh.domain.repositories.admin_queries import DshAdminQueryRepository
+
+    def read():
+        with get_sync_db_session() as session:
+            return DshAdminQueryRepository(session).usage_time_summary(
+                user_id,
+                start_at=start_at,
+                end_at=end_at,
+                granularity=granularity,
+            )
 
     return await asyncio.to_thread(read)
 

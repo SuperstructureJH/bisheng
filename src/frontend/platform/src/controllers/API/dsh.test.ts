@@ -6,6 +6,7 @@ import request from '@/controllers/request'
 import {
     getDshConfig,
     getDshPolicy,
+    getDshUsageTimeSummary,
     saveDshPolicy,
     getDshOperation,
     parseDshConfig,
@@ -124,5 +125,63 @@ describe('DSH API contract boundaries', () => {
             }),
         ).rejects.toThrow()
         expect(request.put).toHaveBeenCalledTimes(calls)
+    })
+    it('accepts a complete time-range usage summary and rejects fabricated token totals', async () => {
+        const metrics = {
+            message_count: 2,
+            qa_count: 1,
+            failed_count: 1,
+            cancelled_count: 0,
+            running_count: 0,
+            usage_unknown_count: 0,
+            recorded_usage_count: 2,
+            missing_usage_count: 0,
+            input_tokens: 10,
+            output_tokens: 5,
+            total_tokens: 15,
+        }
+        const summary = {
+            start_at: '2026-09-01T00:00:00+08:00',
+            end_at: '2026-09-08T00:00:00+08:00',
+            timezone: 'Asia/Shanghai',
+            granularity: 'day',
+            totals: metrics,
+            points: [
+                {
+                    ...metrics,
+                    start_at: '2026-09-01T00:00:00+08:00',
+                    end_at: '2026-09-08T00:00:00+08:00',
+                },
+            ],
+        } as const
+        vi.mocked(request.get).mockResolvedValue(summary)
+        await expect(
+            getDshUsageTimeSummary('20', {
+                startAt: summary.start_at,
+                endAt: summary.end_at,
+                tenantId: '2',
+            }),
+        ).resolves.toEqual(summary)
+        expect(request.get).toHaveBeenLastCalledWith(
+            '/api/v1/dsh/admin/users/20/usage-summary',
+            expect.objectContaining({
+                params: {
+                    start_at: summary.start_at,
+                    end_at: summary.end_at,
+                    tenant_id: '2',
+                },
+            }),
+        )
+
+        vi.mocked(request.get).mockResolvedValue({
+            ...summary,
+            totals: { ...metrics, total_tokens: 14 },
+        })
+        await expect(
+            getDshUsageTimeSummary('20', {
+                startAt: summary.start_at,
+                endAt: summary.end_at,
+            }),
+        ).rejects.toThrow('Invalid DSH response')
     })
 })

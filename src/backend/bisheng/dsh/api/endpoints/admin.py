@@ -1,5 +1,6 @@
 """Browser administration endpoints; actors always come from platform JWT."""
 
+from datetime import datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -148,6 +149,26 @@ async def policy(
     user_id: UserId, user=Depends(admin_user), service=Depends(get_management), tenant_id: TenantId = None
 ):
     return resp_200(data=await service.get_policy(user.user_id, user_id, tenant_id=tenant_id))
+
+
+@router.get("/users/{user_id}/usage-summary")
+async def usage_summary(
+    user_id: UserId,
+    start_at: Annotated[datetime, Query()],
+    end_at: Annotated[datetime, Query()],
+    user=Depends(admin_user),
+    service=Depends(get_management),
+    tenant_id: TenantId = None,
+):
+    return resp_200(
+        data=await service.usage_summary(
+            user.user_id,
+            user_id,
+            start_at=start_at,
+            end_at=end_at,
+            tenant_id=tenant_id,
+        )
+    )
 
 
 @router.get("/users/{user_id}/sessions")

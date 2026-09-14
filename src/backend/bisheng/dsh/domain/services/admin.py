@@ -29,11 +29,13 @@ class DshManagementService:
         now,
         model_users_view=None,
         model_policy_view=None,
+        usage_summary_view=None,
     ):
         self.repository_scope, self.gateway, self.authorize = repository_scope, gateway, authorize
         self.profiles, self.policy, self.policy_view, self.now = profiles, policy, policy_view, now
         self.model_users_view = model_users_view
         self.model_policy_view = model_policy_view
+        self.usage_summary_view = usage_summary_view
 
     async def model_users(
         self, actor_id, model_id, *, tenant_id=None, cursor=None, limit=20, keyword=None, authorized_only=False
@@ -155,6 +157,21 @@ class DshManagementService:
         _actor, tenant = await self.authorize(actor_id, tenant_id, user_id)
         with profile_scope(tenant):
             return await self.policy_view(user_id)
+
+    async def usage_summary(self, actor_id, user_id, *, start_at, end_at, tenant_id=None):
+        if (
+            start_at.tzinfo is None
+            or end_at.tzinfo is None
+            or end_at <= start_at
+            or end_at - start_at > timedelta(days=366)
+        ):
+            raise DshInvalidRequestError()
+        _actor, tenant = await self.authorize(actor_id, tenant_id, user_id)
+        if self.usage_summary_view is None:
+            raise DshAuthorizationUnavailableError()
+        granularity = "hour" if end_at - start_at <= timedelta(hours=48) else "day"
+        with profile_scope(tenant):
+            return await self.usage_summary_view(user_id, start_at, end_at, granularity)
 
     async def get_model_policy(self, actor_id, user_id, model_id, *, tenant_id=None):
         _actor, tenant = await self.authorize(actor_id, tenant_id, user_id)

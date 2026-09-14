@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DshPager } from './common'
 import { UsageSummary } from './UsageSummary'
+import { UsageTimeSummaryPanel } from './UsageTimeSummary'
 
 export function PolicyView() {
     const { t } = useTranslation()
@@ -111,6 +112,7 @@ export function PolicyView() {
                 <>
                     <h3 className="font-semibold">{selected.user_name}</h3>
                     <Button variant="outline" onClick={() => setRevision((old) => old + 1)}>{t('dsh.refresh')}</Button>
+                    <UsageTimeSummaryPanel userId={String(selected.user_id)} revision={revision} />
                     {!policy ? (
                         <p role="status">
                             {t(error ? 'dsh.unavailable' : 'dsh.loading')}

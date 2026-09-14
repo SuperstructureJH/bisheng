@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getDshPolicy, saveDshPolicy } from '@/controllers/API/dsh'
+import { getDshPolicy, getDshUsageTimeSummary, saveDshPolicy } from '@/controllers/API/dsh'
 import { getUsersApi } from '@/controllers/API/user'
 import type { User } from '@/types/api/user'
 import type { DshPolicy } from '@/types/dsh'
@@ -11,6 +11,7 @@ vi.mock('react-i18next', () => ({
 }))
 vi.mock('@/controllers/API/dsh', () => ({
     getDshPolicy: vi.fn(),
+    getDshUsageTimeSummary: vi.fn(),
     saveDshPolicy: vi.fn(),
     isDshRequestRejected: () => false,
 }))
@@ -43,6 +44,26 @@ beforeEach(() => {
         total: 1,
     })
     vi.mocked(getDshPolicy).mockResolvedValue(policy)
+    vi.mocked(getDshUsageTimeSummary).mockResolvedValue({
+        start_at: '2026-09-07T12:00:00+08:00',
+        end_at: '2026-09-14T12:00:00+08:00',
+        timezone: 'Asia/Shanghai',
+        granularity: 'day',
+        totals: {
+            message_count: 2,
+            qa_count: 1,
+            failed_count: 1,
+            cancelled_count: 0,
+            running_count: 0,
+            usage_unknown_count: 0,
+            recorded_usage_count: 2,
+            missing_usage_count: 0,
+            input_tokens: 10,
+            output_tokens: 5,
+            total_tokens: 15,
+        },
+        points: [],
+    })
     vi.mocked(saveDshPolicy).mockRejectedValue(new Error('Uncertain'))
 })
 describe('policy target and governed model view', () => {
