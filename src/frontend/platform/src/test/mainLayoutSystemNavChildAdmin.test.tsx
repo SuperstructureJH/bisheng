@@ -109,7 +109,10 @@ const baseUser = {
   leaf_tenant_name: "华东子公司",
 };
 
-function renderLayout(userOverrides: Record<string, unknown> = {}) {
+function renderLayout(
+  userOverrides: Record<string, unknown> = {},
+  appConfigOverrides: Record<string, unknown> = {},
+) {
   return render(
     <darkContext.Provider value={{ dark: false, setDark: vi.fn() } as any}>
       <locationContext.Provider
@@ -124,7 +127,11 @@ function renderLayout(userOverrides: Record<string, unknown> = {}) {
           setExtraNavigation: vi.fn(),
           extraComponent: null,
           setExtraComponent: vi.fn(),
-          appConfig: { multiTenantEnabled: true, noFace: true },
+          appConfig: {
+            multiTenantEnabled: true,
+            noFace: true,
+            ...appConfigOverrides,
+          },
           reloadConfig: vi.fn(),
         } as any}
       >
@@ -209,5 +216,12 @@ describe("MainLayout identity-specific navigation", () => {
     renderLayout({ role: "admin" });
     expect(screen.getByText("menu.system")).toBeInTheDocument();
     expect(screen.getByText("tenant.management")).toBeInTheDocument();
+  });
+
+  it("global super admin sees organization settings in single-tenant mode", () => {
+    renderLayout({ role: "admin" }, { multiTenantEnabled: false });
+    expect(screen.getByText("menu.system")).toBeInTheDocument();
+    expect(screen.getByText("tenant.profile")).toBeInTheDocument();
+    expect(screen.queryByText("tenant.management")).toBeNull();
   });
 });

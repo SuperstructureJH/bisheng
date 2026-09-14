@@ -1,11 +1,7 @@
 // @ts-strict-ignore
 import { Button } from "@/components/bs-ui/button";
 import { toast } from "@/components/bs-ui/toast/use-toast";
-import {
-  createTenantApi,
-  getTenantApi,
-  updateTenantApi,
-} from "@/controllers/API/tenant";
+import { getTenantApi, updateTenantApi } from "@/controllers/API/tenant";
 import { getUsersApi } from "@/controllers/API/user";
 import { captureAndAlertRequestErrorHoc } from "@/controllers/request";
 import type { Tenant, TenantCreateForm, TenantDetail } from "@/types/api/tenant";
@@ -14,11 +10,17 @@ import { useTranslation } from "react-i18next";
 
 interface Props {
   tenant: Tenant | null;
+  profileMode?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function CreateTenantDialog({ tenant, onClose, onSuccess }: Props) {
+export function CreateTenantDialog({
+  tenant,
+  profileMode = false,
+  onClose,
+  onSuccess,
+}: Props) {
   const { t } = useTranslation("bs");
   const isEdit = !!tenant;
   const [loading, setLoading] = useState(false);
@@ -105,26 +107,23 @@ export function CreateTenantDialog({ tenant, onClose, onSuccess }: Props) {
       return;
     }
     if (!form.tenant_name.trim()) return;
-    if (!isEdit && !form.tenant_code.trim()) return;
-    if (!isEdit && form.admin_user_ids.length === 0) return;
 
     setLoading(true);
     try {
       if (isEdit && tenant) {
-        await captureAndAlertRequestErrorHoc(
+        const updatedTenant = await captureAndAlertRequestErrorHoc(
           updateTenantApi(tenant.id, {
-            tenant_name: form.tenant_name,
+            tenant_name: form.tenant_name.trim(),
             logo: form.logo,
             contact_name: form.contact_name,
             contact_phone: form.contact_phone,
             contact_email: form.contact_email,
           })
         );
-      } else {
-        await captureAndAlertRequestErrorHoc(createTenantApi(form));
+        if (!updatedTenant) return;
       }
       toast({
-        title: isEdit ? t("updateSuccess") : t("createSuccess"),
+        title: t("updateSuccess"),
         variant: "success",
       });
       onSuccess();
@@ -139,7 +138,11 @@ export function CreateTenantDialog({ tenant, onClose, onSuccess }: Props) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-background rounded-lg p-6 w-[520px] max-h-[90vh] overflow-y-auto shadow-lg">
         <h3 className="text-lg font-semibold mb-4">
-          {isEdit ? t("tenant.edit") : t("tenant.create")}
+          {profileMode
+            ? t("tenant.profileEdit")
+            : isEdit
+              ? t("tenant.edit")
+              : t("tenant.create")}
         </h3>
 
         {!isEdit && (
@@ -154,7 +157,8 @@ export function CreateTenantDialog({ tenant, onClose, onSuccess }: Props) {
           {/* Tenant Name */}
           <div>
             <label className="text-sm font-medium block mb-1">
-              {t("tenant.name")} <span className="text-red-500">*</span>
+              {t(profileMode ? "tenant.organizationName" : "tenant.name")} {" "}
+              <span className="text-red-500">*</span>
             </label>
             <input
               className="w-full border rounded px-3 py-2 bg-background"

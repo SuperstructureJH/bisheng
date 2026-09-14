@@ -14,6 +14,7 @@ import {
 import { toast } from "@/components/bs-ui/toast/use-toast";
 import {
   deleteTenantApi,
+  getTenantApi,
   getTenantsApi,
   updateTenantStatusApi,
 } from "@/controllers/API/tenant";
@@ -22,7 +23,7 @@ import { locationContext } from "@/contexts/locationContext";
 import { userContext } from "@/contexts/userContext";
 import { useTable } from "@/util/hook";
 import { displayTenantName } from "@/utils/tenantDisplayName";
-import { useContext, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 import { CreateTenantDialog } from "./components/CreateTenantDialog";
@@ -41,7 +42,8 @@ const statusColors: Record<string, string> = {
 // Root tenant is system-protected (INV-T11): disable/archive/delete are
 // rejected server-side with errcode 22008. Hide the disable button to avoid
 // surfacing an error path; edit/quota remain allowed.
-const isRootTenant = (tenant: Tenant) => tenant.id === 1;
+const ROOT_TENANT_ID = 1;
+const isRootTenant = (tenant: Tenant) => tenant.id === ROOT_TENANT_ID;
 
 // The /tenant route currently uses permission='sys' so the route guard
 // admits Child Admins (routes/index.tsx falls 'sys' back for them). But
@@ -61,6 +63,7 @@ function TenantPageInner() {
   const { t } = useTranslation("bs");
   const { appConfig } = useContext(locationContext);
   const multiTenantEnabled = !!appConfig?.multiTenantEnabled;
+  const [rootTenant, setRootTenant] = useState<Tenant | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTenant, setEditTenant] = useState<Tenant | null>(null);
   const [userDialogTenant, setUserDialogTenant] = useState<Tenant | null>(null);
@@ -86,6 +89,29 @@ function TenantPageInner() {
         page: param.page,
         page_size: param.pageSize,
       })
+  );
+  const loadRootTenant = useCallback(async () => {
+    const tenant = await captureAndAlertRequestErrorHoc(
+      getTenantApi(ROOT_TENANT_ID)
+    );
+    if (tenant && typeof tenant === "object") {
+      setRootTenant(tenant);
+    }
+  }, []);
+  useEffect(() => {
+    if (multiTenantEnabled) {
+      setRootTenant(null);
+      return;
+    }
+    void loadRootTenant();
+  }, [loadRootTenant, multiTenantEnabled]);
+  const visibleTenants = multiTenantEnabled
+    ? tenants
+    : rootTenant
+      ? [rootTenant]
+      : [];
+  const pageTitle = t(
+    multiTenantEnabled ? "tenant.management" : "tenant.profile"
   );
 
   const handleToggleStatus = (tenant: Tenant) => {
@@ -130,23 +156,18 @@ function TenantPageInner() {
     );
   };
 
-  // Tenant CRUD only makes sense in multi-tenant deployments. The route is
-  // permission-gated ('sys') but a super admin could still hit /tenant by URL
-  // in a single-tenant install; redirect home to keep the Root tenant safe.
-  if (!multiTenantEnabled) {
-    return <Navigate to="/" replace />;
-  }
-
   return (
     <div className="relative h-full px-2 py-4 overflow-hidden">
       <div className="flex justify-between items-center mb-4">
-        <span className="text-lg font-bold">{t("tenant.management")}</span>
-        <div className="flex gap-4 items-center">
-          <SearchInput
-            placeholder={t("tenant.search")}
-            onChange={(e: any) => search(e.target.value)}
-          />
-        </div>
+        <span className="text-lg font-bold">{pageTitle}</span>
+        {multiTenantEnabled && (
+          <div className="flex gap-4 items-center">
+            <SearchInput
+              placeholder={t("tenant.search")}
+              onChange={(e: any) => search(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="h-[calc(100vh-200px-var(--license-banner-h,0px))] overflow-y-auto">
@@ -163,7 +184,7 @@ function TenantPageInner() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tenants.map((tenant: Tenant) => {
+            {visibleTenants.map((tenant: Tenant) => {
               const tenantLabel = displayTenantName(tenant.tenant_name);
               return (
               <TableRow key={tenant.id}>
@@ -286,26 +307,31 @@ function TenantPageInner() {
         </Table>
       </div>
 
-      <div className="bisheng-table-footer bg-background-login">
-        <p className="desc">
-          {t("tenant.management")}
-        </p>
-        <AutoPagination
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          onChange={(newPage: number) => setPage(newPage)}
-        />
-      </div>
+      {multiTenantEnabled && (
+        <div className="bisheng-table-footer bg-background-login">
+          <p className="desc">{t("tenant.management")}</p>
+          <AutoPagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onChange={(newPage: number) => setPage(newPage)}
+          />
+        </div>
+      )}
 
       {/* Create/Edit Dialog */}
       {createOpen && (
         <CreateTenantDialog
           tenant={editTenant}
+          profileMode={!multiTenantEnabled}
           onClose={() => setCreateOpen(false)}
           onSuccess={() => {
             setCreateOpen(false);
-            reload();
+            if (multiTenantEnabled) {
+              reload();
+            } else {
+              void loadRootTenant();
+            }
           }}
         />
       )}
