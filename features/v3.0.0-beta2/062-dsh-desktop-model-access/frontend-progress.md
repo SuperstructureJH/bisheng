@@ -42,3 +42,10 @@
 2026-09-09 本次 UI 最终代码：`pnpm lint`（platform/client/ui/file-viewers）、`pnpm typecheck`（platform/client/file-viewers）、`pnpm check-i18n` 均 exit 0；`git diff --check` 通过。F062 26 项 + 原路由/权限回归 11 项，共 37 项通过。`pnpm --dir src/frontend/platform lint:prune` 自动缩减 3 项既有中文 suppression，未手工改基线。
 
 本机预览服务仍位于 `127.0.0.1:3062`（仅本机、Vite），供主线继续查看；不代表部署。主线可在所有工作完成时停止该服务。
+
+## 2026-09-14 授权成功页返回首页
+
+- 浏览器授权成功后保留一次性授权码复制兜底和【返回首页】按钮，10 秒后静默返回毕昇首页。
+- 页面不展示返回倒计时或授权码剩余秒数；拒绝、失败、过期状态不自动跳转。
+- `DshLogin` 与授权 Hook 针对性测试 19 项通过，覆盖 10 秒定时跳转、立即返回按钮和拒绝授权不跳转；改动文件 ESLint、三语言一致性检查及平台生产构建通过。
+- 全量平台类型检查仍有目标分支原有的 `f048DashboardPermissions.test.tsx`、`routeFilterPurity.test.ts` 两项错误；实际浏览器、桌面客户端及部署环境仍按独立联调验收记录。
