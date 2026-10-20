@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
+jest.mock('~/utils', () => ({ cn: (...values: unknown[]) => values.filter(Boolean).join(' ') }));
 import { ContextResourceCard } from './ContextResourceCard';
 import { handleComposerResourceKeyDown } from './composerResourceKeyboard';
 

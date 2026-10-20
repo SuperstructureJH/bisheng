@@ -111,3 +111,9 @@ body[data-dsh-chat-theme] .dsh-add-menu [role="menuitemcheckbox"] > span:last-ch
 
 .dsh-command-skills .skill-menu-name { flex:0 0 auto; max-width:100%; }
 .dsh-command-skills .skill-menu-description { min-width:0; flex:1; }
+
+.dsh-composer-writing { position:relative; width:100%; min-width:0; overflow:hidden; }
+.dsh-composer-editor { width:100%; min-height:52px; max-height:240px; overflow-y:auto; white-space:pre-wrap; overflow-wrap:anywhere; outline:none; background:transparent; color:rgb(var(--text-1)); font:inherit; }
+.dsh-composer-editor[data-empty=true]::before { content:attr(data-placeholder); color:rgb(var(--text-3)); pointer-events:none; }
+.dsh-inline-reference { display:inline; color:rgb(var(--brand-500)); font:inherit; cursor:text; }
+@media (pointer:coarse) { .dsh-resource-remove { opacity:1; } }
