@@ -23,9 +23,10 @@ export const ContextResourceCard = ({
             onClick && "cursor-pointer",
         )}
         style={{ width: 224 }}
-        onClick={onClick}
+        data-composer-resource={onRemove ? "" : undefined}
+        onClick={(event) => { if (onRemove) event.currentTarget.focus(); onClick?.(); }}
         role={onClick ? "button" : undefined}
-        tabIndex={onClick ? 0 : undefined}
+        tabIndex={onRemove || onClick ? 0 : undefined}
         onKeyDown={onClick ? (event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onClick(); } } : undefined}
     >
         <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded text-text-2">{icon}</span>
@@ -43,6 +44,7 @@ export const ContextResourceCard = ({
                 // pointer can't hover (touch) — gated by CSS hover capability, not
                 // screen width, so a small-screen PC still gets the hover behaviour.
                 className="dsh-resource-remove absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-fill-2 text-text-3 opacity-0 hover:text-text-1 group-hover:opacity-100 focus-visible:opacity-100 coarse-pointer:opacity-100"
+                data-composer-remove
                 aria-label="Remove"
             >
                 <Outlined.Close size={12} />

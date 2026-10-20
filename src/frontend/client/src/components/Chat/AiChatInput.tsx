@@ -21,6 +21,7 @@ import { ChatSkillSelector } from "./Input/ChatSkillSelector";
 import { ChatResourceMenu } from "~/components/Chat/Input/ChatResourceMenu";
 import { SkillMenuEntries } from "~/components/Skills/SkillMenuEntries";
 import { skillCenterPreviewEnabled } from "~/components/Skills/types";
+import { handleComposerResourceKeyDown } from "./Input/composerResourceKeyboard";
 import { AttachmentBar } from "~/components/Chat/Input/AttachmentBar";
 import DragDropOverlay from "~/components/Chat/Input/Files/DragDropOverlay";
 import { Outlined } from "bisheng-icons";
@@ -501,6 +502,7 @@ const AiChatInput = memo(
                 </div>}
 
                 <div
+                    onKeyDownCapture={(event) => handleComposerResourceKeyDown(event, !!disabled || !!isStreaming, isComposingRef.current)}
                     className={cn(
                         // Figma 12669:66966 — white surface, 16px radius, hairline
                         // border (replaces the legacy gray fill). z-[1] keeps it
@@ -519,13 +521,15 @@ const AiChatInput = memo(
                             files={chatFiles || []}
                             kbs={selectedOrgKbs || []}
                             skills={mountedSkills}
-                            onRemoveKb={onSelectedOrgKbsChange ? (kb) => onSelectedOrgKbsChange(selectedOrgKbs.filter((item) => item.id !== kb.id || item.type !== kb.type)) : undefined}
-                            onRemoveSkill={(skill) => setDailySkills(dailySkills.filter((item) => item.name !== skill.name))}
-                            onRemoveFile={(file) => {
+                            onRemoveKb={!disabled && !isStreaming && onSelectedOrgKbsChange ? (kb) => onSelectedOrgKbsChange(selectedOrgKbs.filter((item) => item.id !== kb.id || item.type !== kb.type)) : undefined}
+                            onRemoveSkill={disabled || isStreaming ? undefined : (skill) => setDailySkills(dailySkills.filter((item) => item.name !== skill.name))}
+                            onRemoveFile={disabled || isStreaming ? undefined : (file) => {
                                 // clientId, not name: a folder upload can carry the
                                 // same file name in several subdirectories.
-                                inputFilesRef.current?.removeByClientId?.(file.clientId);
-                                setChatFiles((prev) => (prev || []).filter((i) => String(i.clientId) !== String(file.clientId)));
+                                const id = String(file.clientId ?? file.id);
+                                inputFilesRef.current?.removeByClientId?.(id);
+                                setUploadingFiles((prev) => prev.filter((item) => String(item.clientId ?? item.id) !== id));
+                                setChatFiles((prev) => (prev || []).filter((item) => String(item.clientId ?? item.id) !== id));
                             }}
                         />
                     )}
