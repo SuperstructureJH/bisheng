@@ -342,7 +342,7 @@ const AiChatInput = memo(
         // knowledge bases and files coexist freely — there's no mutex anymore.
         // `agentMode` stays around only so Lingsi / legacy renderers keep working.
         const agentMode = Array.isArray(bsConfig?.tools) && bsConfig.tools.length > 0;
-        const showSkillPicker = allowConfiguration && !isLingsi && !!onSelectedOrgKbsChange && showAddSkill;
+        const showSkillPicker = taskMode && !isLingsi && !!onSelectedOrgKbsChange && showAddSkill;
         const showToolPicker = allowConfiguration && tools && (agentMode || (!!onSearchTypeChange && !!bsConfig?.webSearch?.enabled));
         const filesDisabled = !!disabled;
         const fileAccept = buildChatAccept({
@@ -472,7 +472,7 @@ const AiChatInput = memo(
 
         // Skills join the knowledge spaces as context resources you
         // mount onto the conversation, not something you are about to send.
-        const mountedSkills = allowConfiguration && taskMode && !isLingsi ? dailySkills : [];
+        const mountedSkills = taskMode && !isLingsi ? dailySkills : [];
         const { references, onReferencesChange } = useComposerReferences(
             mountedSkills, isLingsi ? [] : selectedOrgKbs, setDailySkills, onSelectedOrgKbsChange,
         );
@@ -682,12 +682,7 @@ const AiChatInput = memo(
                                     {/* Executable skills use the platform picker and task submission path. */}
                                     {showSkillPicker ? <ChatSkillSelector menu
                                             selected={taskMode ? dailySkills : []} disabled={!!disabled}
-                                            onChange={(next) => {
-                                                setDailySkills(next);
-                                                if (taskMode) return;
-                                                if (onToggleTaskMode) onToggleTaskMode();
-                                                else navigate('/linsight/new');
-                                            }} />
+                                            onChange={setDailySkills} />
                                         : skillCenterPreviewEnabled && <SkillMenuEntries inline />}
                                 </ChatResourceMenu>
                             )}
