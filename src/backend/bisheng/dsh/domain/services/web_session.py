@@ -42,7 +42,7 @@ async def create_web_session(runtime, authorization: str) -> dict:
         cookie = AuthJwt().create_access_token(subject, expires_in=ttl)
         redis = await session_store()
         await redis.set(PREFIX + key, authorization, ex=ttl)
-    return {"cookie": cookie, "expires_in": ttl}
+    return {"cookie": cookie, "cookie_name": runtime.settings.web_session_cookie_name, "expires_in": ttl}
 
 
 async def validate_web_session(connection, subject: dict) -> None:

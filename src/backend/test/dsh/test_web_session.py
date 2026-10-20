@@ -25,13 +25,17 @@ def principal():
     return DshPrincipal(tenant_id="2", user_id="42", session_id="session")
 
 
-async def test_exchange_binds_short_cookie_and_keeps_access_token_server_side(monkeypatch):
+@pytest.mark.parametrize("cookie_name", ["access_token_cookie", "bs_credits_3007"])
+async def test_exchange_binds_short_cookie_and_keeps_access_token_server_side(monkeypatch, cookie_name):
     redis = SimpleNamespace(set=AsyncMock())
     monkeypatch.setattr(web_session, "session_store", AsyncMock(return_value=redis))
     access = "Bearer " + jwt.encode(
         {"exp": int(time.time()) + 90}, "fixture-signing-key-long-enough-32", algorithm="HS256"
     )
-    runtime = SimpleNamespace(access=SimpleNamespace(authenticate=AsyncMock(return_value=principal())))
+    runtime = SimpleNamespace(
+        access=SimpleNamespace(authenticate=AsyncMock(return_value=principal())),
+        settings=SimpleNamespace(web_session_cookie_name=cookie_name),
+    )
     user = SimpleNamespace(user_name="Alice", token_version=3, delete=0)
     with (
         patch("bisheng.user.domain.models.user.UserDao.aget_user", AsyncMock(return_value=user)),
@@ -41,6 +45,7 @@ async def test_exchange_binds_short_cookie_and_keeps_access_token_server_side(mo
         result = await web_session.create_web_session(runtime, access)
     assert 30 <= result["expires_in"] <= 90
     assert result["cookie"] == "browser-cookie"
+    assert result["cookie_name"] == cookie_name
     subject = auth.return_value.create_access_token.call_args.args[0]
     assert subject["tenant_id"] == 2
     assert subject["user_id"] == 42
@@ -193,7 +198,10 @@ async def test_exchange_uses_real_jwt_signer_with_bounded_lifetime(monkeypatch):
     access = "Bearer " + jwt.encode({"exp": now + 3600}, secret, algorithm="HS256")
     redis = SimpleNamespace(set=AsyncMock())
     monkeypatch.setattr(web_session, "session_store", AsyncMock(return_value=redis))
-    runtime = SimpleNamespace(access=SimpleNamespace(authenticate=AsyncMock(return_value=principal())))
+    runtime = SimpleNamespace(
+        access=SimpleNamespace(authenticate=AsyncMock(return_value=principal())),
+        settings=SimpleNamespace(web_session_cookie_name="access_token_cookie"),
+    )
     user = SimpleNamespace(user_name="Alice", token_version=3, delete=0)
     with (
         patch("bisheng.user.domain.models.user.UserDao.aget_user", AsyncMock(return_value=user)),
