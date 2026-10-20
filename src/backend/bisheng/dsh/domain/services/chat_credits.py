@@ -39,7 +39,9 @@ async def start(model):
     if not identity or not identity.active or not identity.tenant_active or not identity.natural_person:
         raise DshUserDisabledError()
     policy = await read_policy(model.user_id)
-    if model.model_id not in policy.allowed_model_ids:
+    # Chat accepts string IDs; the loaded record provides the canonical ledger ID.
+    model_id = model.model_info.id
+    if model_id not in policy.allowed_model_ids:
         raise DshModelNotAllowedError()
     loop = asyncio.get_running_loop()
     runtime = _runtimes.setdefault(loop, SimpleNamespace(settings=settings.dsh))
@@ -53,7 +55,7 @@ async def start(model):
         tenant_id=tenant,
         user_id=model.user_id,
         session_id=request_id,
-        model_id=model.model_id,
+        model_id=model_id,
         usage_month=now.astimezone(ZoneInfo(settings.dsh.billing_timezone)).strftime("%Y-%m"),
         billing_timezone=settings.dsh.billing_timezone,
         policy_version=policy.version,

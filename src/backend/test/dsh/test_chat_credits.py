@@ -109,3 +109,43 @@ def test_streaming_usage_accumulates_input_and_output_chunks():
     last = AIMessageChunk(content="", usage_metadata={"input_tokens": 0, "output_tokens": 19, "total_tokens": 19})
     usage = accumulate_usage(accumulate_usage(DshTokenUsage(), first), last)
     assert (usage.input_tokens, usage.output_tokens, usage.total_tokens) == (120, 19, 139)
+
+
+@pytest.mark.parametrize("requested_id", ["7", 7])
+async def test_chat_admission_uses_loaded_model_id(monkeypatch, requested_id):
+    from bisheng.common.services.config_service import settings
+    from bisheng.core.context import tenant
+    from bisheng.dsh import runtime
+    from bisheng.dsh.domain.repositories.identities import CurrentIdentityRecords
+
+    monkeypatch.setattr(tenant, "get_current_tenant_id", lambda: 1)
+    monkeypatch.setattr(
+        CurrentIdentityRecords,
+        "get",
+        AsyncMock(return_value=SimpleNamespace(active=True, tenant_active=True, natural_person=True)),
+    )
+    monkeypatch.setattr(
+        runtime,
+        "read_policy",
+        AsyncMock(
+            return_value=SimpleNamespace(
+                allowed_model_ids=[7],
+                version=1,
+                quota_epoch=1,
+                monthly_token_limit=1_000_000,
+            )
+        ),
+    )
+    admission = AsyncMock(side_effect=lambda event, **kwargs: event)
+    service = SimpleNamespace(
+        activate=AsyncMock(),
+        usage=SimpleNamespace(check_and_start=admission),
+        model=object(),
+    )
+    monkeypatch.setattr(runtime, "get_model_runtime", AsyncMock(return_value=service))
+    monkeypatch.setattr(settings.dsh, "billing_timezone", "Asia/Shanghai")
+    _, event, _ = await chat_credits.start(
+        SimpleNamespace(user_id=2, model_id=requested_id, model_info=SimpleNamespace(id=7)),
+    )
+    assert event.model_id == 7
+    admission.assert_awaited_once()
