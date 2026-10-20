@@ -1,4 +1,4 @@
-"""DSH-only JWT validation and online seat checks with explicit tenant scope."""
+"""DSH JWT validation and online session checks with explicit tenant scope."""
 
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -19,9 +19,7 @@ from bisheng.dsh.domain.schemas.contracts import DshContract, SubjectId
 class DshPrincipal(DshContract):
     tenant_id: SubjectId
     user_id: SubjectId
-    seat_id: str = Field(min_length=1)
     session_id: str = Field(min_length=1)
-    grant_version: int = Field(strict=True, ge=1)
 
 
 @contextmanager
@@ -79,9 +77,7 @@ class DshAccessService:
                         "aud",
                         "sub",
                         "tenant_id",
-                        "seat_id",
                         "session_id",
-                        "grant_version",
                         "iat",
                         "exp",
                         "jti",
@@ -90,7 +86,7 @@ class DshAccessService:
                 },
             )
             if (
-                len(claims) != 10
+                len(claims) != 8
                 or type(claims["iat"]) is not int
                 or type(claims["exp"]) is not int
                 or claims["exp"] <= claims["iat"]
@@ -102,9 +98,7 @@ class DshAccessService:
             principal = DshPrincipal(
                 tenant_id=claims["tenant_id"],
                 user_id=claims["sub"],
-                seat_id=claims["seat_id"],
                 session_id=claims["session_id"],
-                grant_version=claims["grant_version"],
             )
             if int(principal.tenant_id) < 1 or int(principal.user_id) < 1:
                 raise DshInvalidAccessTokenError()
@@ -119,14 +113,12 @@ class DshAccessService:
                 principal.user_id,
             ):
                 raise DshInvalidAccessTokenError()
-            seat = await self.gateway.introspect(token)
-            if not seat.active:
-                error = ERROR_BY_CLIENT_CODE.get(seat.reason, DshAuthorizationUnavailableError)
+            session = await self.gateway.introspect(token)
+            if not session.active:
+                error = ERROR_BY_CLIENT_CODE.get(session.reason, DshAuthorizationUnavailableError)
                 raise error()
-            if (seat.seat_id, seat.session_id, seat.grant_version) != (
-                principal.seat_id,
-                principal.session_id,
-                principal.grant_version,
+            if (session.tenant_id, session.user_id, session.session_id) != (
+                principal.tenant_id, principal.user_id, principal.session_id,
             ):
                 raise DshInvalidAccessTokenError()
         return principal

@@ -34,7 +34,6 @@ class SeatItem(DshContract):
 
 class SessionItem(DshContract):
     session_id: str = Field(min_length=1)
-    seat_id: str = Field(min_length=1)
     device_label: str | None
     client_version: str | None
     state: str = Field(min_length=1)

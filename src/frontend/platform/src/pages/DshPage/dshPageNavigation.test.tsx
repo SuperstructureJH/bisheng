@@ -60,9 +60,9 @@ describe('DshPage navigation', () => {
 
         const tablist = screen.getByRole('tablist', { name: 'dsh.title' })
         expect(tablist.closest('.px-2')).toBeTruthy()
-        expect(screen.getAllByRole('tab')).toHaveLength(5)
+        expect(screen.getAllByRole('tab')).toHaveLength(4)
         expect(screen.queryByRole('tab', { name: 'dsh.operations' })).toBeNull()
-        expect(screen.getByRole('tab', { name: 'dsh.userUsage' })).toHaveAttribute(
+        expect(screen.getByRole('tab', { name: 'dsh.unified.overview' })).toHaveAttribute(
             'data-state',
             'active',
         )
@@ -98,9 +98,9 @@ describe('DshPage navigation', () => {
             </MemoryRouter>,
         )
         expect(screen.queryByRole('tab', { name: 'dsh.operations' })).toBeNull()
-        expect(screen.getByRole('tab', { name: 'dsh.licenseAndSeats' })).toHaveAttribute('data-state', 'active')
-        expect(screen.getByTestId('dsh-section')).toHaveTextContent('license')
-        expect(resolveDshSection('?tab=operations')).toBe('license')
+        expect(screen.getByRole('tab', { name: 'dsh.unified.overview' })).toHaveAttribute('data-state', 'active')
+        expect(screen.getByTestId('dsh-section')).toHaveTextContent('usage')
+        expect(resolveDshSection('?tab=operations')).toBe('usage')
         expect(resolveDshSection('?tab=operations', ['access'])).toBe('access')
     })
 })

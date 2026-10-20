@@ -2979,7 +2979,30 @@
     "individualQuota": "個別設定",
     "useDepartmentQuota": "部門の既定枠を継承",
     "inlineQuotaHelp": "部門枠の変更は既定のメンバーに反映されます。個別設定は維持されます。保存すると適用されます。",
-    "monthlyQuotaWan": "月間利用枠（万 Token）"
+    "monthlyQuotaWan": "月間利用枠（万 Token）",
+    "unified": {
+      "overview": "クレジットと使用状況",
+      "models": "モデル権限",
+      "credits": "クレジット設定",
+      "visibility": "公開範囲",
+      "visibilityHelp": "Chat と Work で公開範囲を共有します。許可されたメンバーはモデルを選択し、個人クレジットを使用します。",
+      "everyone": "全メンバー",
+      "DEPARTMENT": "部署",
+      "ROLE": "ロール",
+      "USER": "メンバー",
+      "ruleHelp": "毎月の個人クレジットを設定します。個人設定が優先され、部署とロールが重複する場合は最大値を適用します。1 クレジット = 100 万トークン。Chat と Work で共有します。個人設定を無効にすると部署・ロール設定に戻ります。",
+      "scope": "対象範囲",
+      "monthlyCredits": "1 人あたりの月間クレジット",
+      "enabled": "ルールを有効化",
+      "selectSubject": "対象を選択",
+      "save": "保存",
+      "saving": "保存中…",
+      "cancel": "キャンセル",
+      "edit": "編集",
+      "yes": "有効",
+      "no": "無効",
+      "usedCredits": "この期間の使用ポイント: {{value}}"
+    }
   },
   "request": {
     "session_expired": "セッションの有効期限が切れました",

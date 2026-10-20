@@ -2451,6 +2451,11 @@
       "hundredBillion": "100B",
       "hundredMillion": "100M",
       "tenThousand": "10K"
+    },
+    "credits": {
+      "balance": "{{value}} credits left",
+      "unavailable": "Balance unavailable",
+      "help": "Chat and Work share credits, reset monthly."
     }
   },
   "com_citation.preview_loading": "Loading preview…",

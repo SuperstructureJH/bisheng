@@ -7,9 +7,11 @@ from bisheng.dsh.api.endpoints.identity import router as identity_router
 from bisheng.dsh.api.endpoints.models import router as model_router
 from bisheng.dsh.api.endpoints.self_service import router as self_router
 from bisheng.dsh.api.endpoints.settings import router as settings_router
+from bisheng.dsh.api.endpoints.unified_policy import router as unified_policy_router
 from bisheng.dsh.api.endpoints.web_session import router as web_session_router
 
 router = APIRouter()
+router.include_router(unified_policy_router)
 router.include_router(web_session_router)
 router.include_router(self_router)
 router.include_router(identity_router)

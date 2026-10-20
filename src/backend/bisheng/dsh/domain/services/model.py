@@ -130,9 +130,7 @@ class DshModelService:
                 trace_id=request_id,
                 tenant_id=int(principal.tenant_id),
                 user_id=int(principal.user_id),
-                seat_id=principal.seat_id,
                 session_id=principal.session_id,
-                grant_version=principal.grant_version,
                 model_id=request.model_id,
                 usage_month=started.astimezone(self.timezone).strftime("%Y-%m"),
                 billing_timezone=self.billing_timezone,
@@ -143,7 +141,7 @@ class DshModelService:
                 started_at=started,
             )
             try:
-                event = await self.usage.check_and_start(event, monthly_token_limit=selected_policy.monthly_token_limit)
+                event = await self.usage.check_and_start(event, monthly_token_limit=policy.monthly_token_limit)
             except QuotaRejected as error:
                 if error.reason == "quota_exceeded":
                     raise DshMonthlyTokenLimitExceededError() from error

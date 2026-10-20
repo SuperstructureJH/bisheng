@@ -93,7 +93,6 @@ async def get_admin_runtime(runtime, *, quota=None, usage=None):
     from bisheng.dsh.runtime import get_model_runtime, read_policy
     from bisheng.llm.domain.services.llm import LLMService
     from bisheng.user.domain.services.dsh_display import read_dsh_display_profiles
-    from bisheng.worker.dsh.profiles import ProfileOutboxWorker
 
     model_runtime = None
     if quota is None:
@@ -140,56 +139,12 @@ async def get_admin_runtime(runtime, *, quota=None, usage=None):
         last_call_reader=read_last_call,
     )
 
-    class ActivatedQuota:
-        def __getattr__(self, name):
-            async def invoke(*args, **kwargs):
-                if model_runtime is not None:
-                    await model_runtime.activate()
-                return await getattr(quota, name)(*args, **kwargs)
-
-            return invoke
-
-    async def allocate_person(current):
-        from uuid import UUID, uuid5
-
-        from bisheng.dsh.domain.services.seat_allocation import allocate_seats
-
-        actor, tenant = await authorize_admin(current["actor_user_id"], current["tenant_id"], current["user_id"])
-        await allocate_seats(
-            runtime.gateway,
-            str(uuid5(UUID(current["operation_id"]), "seat-allocation")),
-            actor,
-            tenant,
-            [current["user_id"]],
-        )
-
-    policy = DshAdminService(
-        repository_scope=policy_repository_scope,
-        quota=ActivatedQuota(),
-        allocate=allocate_person,
-        authorize=validate_target,
-        validate_models=validate_models,
-        now=now,
-    )
-
-    async def grant_subject(*, actor, tenant, actor_id, model_id, subject_type, subject_id, request):
-        return await write_subject_grant(
-            runtime.gateway,
-            actor=actor,
-            tenant=tenant,
-            actor_id=actor_id,
-            model_id=model_id,
-            subject_type=subject_type,
-            subject_id=subject_id,
-            request=request,
-        )
-
     admin = DshManagementService(
         repository_scope=operation_repository_scope,
         gateway=runtime.gateway,
         authorize=authorize_admin,
         profiles=read_dsh_display_profiles,
-        policy=policy,
+        policy=None,
         policy_view=policy_view,
         now=now,
         model_users_view=read_model_users,
@@ -198,14 +153,10 @@ async def get_admin_runtime(runtime, *, quota=None, usage=None):
         usage_summary_view=read_usage_time_summary,
         usage_overview_view=read_usage_overview,
         subject_policy_view=read_subject_policies,
-        subject_grant=grant_subject,
+
         audit_view=read_audit_records,
     )
-    result = AdminRuntime(
-        admin,
-        policy,
-        ProfileOutboxWorker(repository_scope=operation_repository_scope, gateway=runtime.gateway, now=now),
-    )
+    result = AdminRuntime(admin, None, None)
     runtime.administration = result
     return result
 

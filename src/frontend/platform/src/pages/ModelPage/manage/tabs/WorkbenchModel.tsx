@@ -1,3 +1,4 @@
+import { useDshBrowserConfig } from "@/hooks/useDshBrowserConfig";
 // @ts-strict-ignore
 import { LoadIcon, LoadingIcon } from "@/components/bs-icons/loading";
 import { bsConfirm } from "@/components/bs-ui/alertDialog/useConfirm";
@@ -56,6 +57,7 @@ export const ModelSelect = ({ required = false, close = false, label, tooltipTex
 }
 
 export default function WorkbenchModel({ onBack }) {
+    const { config: enterpriseConfig } = useDshBrowserConfig();
     const { llmOptions, embeddings, asrModel, ttsModel } = useModel();
     const { t } = useTranslation('model')
     const { message } = useToast()
@@ -241,7 +243,7 @@ export default function WorkbenchModel({ onBack }) {
                     <InheritedBadge visible={true} />
                 </div>
             )}
-            <div>
+            {enterpriseConfig?.enabled ? <a href="/dsh?tab=models" className="text-primary">{t('model.configureDshPermission')}</a> : <div>
                 <h3 className="bisheng-label mb-2">日常模式/知识空间/订阅对话模型</h3>
                 <ModelManagement
                     ref={modelRefs}
@@ -290,7 +292,7 @@ export default function WorkbenchModel({ onBack }) {
                         models: prev.models.map((item, i) => i === index ? { ...item, visual } : item),
                     }))}
                 />
-            </div>
+            </div>}
             <ModelSelect
                 close
                 label={t('model.workVectorModel')}

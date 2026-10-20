@@ -3034,7 +3034,30 @@
     "individualQuota": "Custom quota",
     "useDepartmentQuota": "Use department default",
     "inlineQuotaHelp": "Department changes apply to default members. Custom quotas stay unchanged. Click Save to apply.",
-    "monthlyQuotaWan": "Monthly quota (10K Tokens)"
+    "monthlyQuotaWan": "Monthly quota (10K Tokens)",
+    "unified": {
+      "overview": "Credits and usage",
+      "models": "Model permissions",
+      "credits": "Credit allowances",
+      "visibility": "Visibility",
+      "visibilityHelp": "Chat and Work share this scope. Authorized members can select this model and spend their personal credits.",
+      "everyone": "Everyone",
+      "DEPARTMENT": "Department",
+      "ROLE": "Role",
+      "USER": "Member",
+      "ruleHelp": "Monthly credits per member. Personal rules override inherited rules; matching department and role rules use the highest allowance. 1 credit = 1 million tokens, shared by Chat and Work. Disabling a personal rule restores inherited rules.",
+      "scope": "Scope",
+      "monthlyCredits": "Credits per member / month",
+      "enabled": "Enable rule",
+      "selectSubject": "Select a subject",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "yes": "Enabled",
+      "no": "Disabled",
+      "usedCredits": "Credits used in this period: {{value}}"
+    }
   },
   "request": {
     "session_expired": "Session expired",

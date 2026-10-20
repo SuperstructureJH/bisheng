@@ -6,11 +6,11 @@ import time
 import jwt
 import pytest
 
-from bisheng.common.errcode.dsh import DshInvalidAccessTokenError, DshSeatRevokedError
+from bisheng.common.errcode.dsh import DshInvalidAccessTokenError, DshSessionRevokedError
 from bisheng.core.context import tenant as context
 from bisheng.dsh.domain.schemas.contracts import DshIdentitySnapshot, DshTenantDisplay, DshUserDisplay
 from bisheng.dsh.domain.services.access import DshAccessService, principal_scope
-from bisheng.dsh.infrastructure.gateway_client import SeatIntrospection
+from bisheng.dsh.infrastructure.gateway_client import SessionIntrospection
 
 
 class Keys:
@@ -35,16 +35,17 @@ class Identities:
         )
 
 
-class Seats:
+class Sessions:
     active = True
 
-    async def introspect(self, _):
-        return SeatIntrospection(
+    async def introspect(self, raw):
+        claims = jwt.decode(raw, options={"verify_signature": False})
+        return SessionIntrospection(
             active=self.active,
-            seat_id="42",
+            tenant_id=claims["tenant_id"],
+            user_id=claims["sub"],
             session_id="session-test",
-            grant_version=1,
-            reason=None if self.active else "seat_revoked",
+            reason=None if self.active else "session_revoked",
         )
 
 
@@ -55,9 +56,7 @@ def token(**overrides):
         "aud": "bisheng-dsh-model",
         "sub": "1001",
         "tenant_id": "2",
-        "seat_id": "42",
         "session_id": "session-test",
-        "grant_version": 1,
         "iat": now,
         "exp": now + 300,
         "jti": "test-jti",
@@ -67,7 +66,7 @@ def token(**overrides):
 
 
 def service(seats=None):
-    return DshAccessService("test-issuer", Keys(), Identities(), seats or Seats())
+    return DshAccessService("test-issuer", Keys(), Identities(), seats or Sessions())
 
 
 @pytest.mark.parametrize(
@@ -94,8 +93,8 @@ async def test_pat_sak_and_ordinary_jwt_are_not_fallback_credentials():
             await service().authenticate("Bearer " + credential)
 
 
-async def test_online_seat_check_and_parallel_scopes_are_restored():
-    seats = Seats()
+async def test_online_session_check_and_parallel_scopes_are_restored():
+    seats = Sessions()
     access = service(seats)
     scope_token = context.set_admin_scope_tenant_id(99)
     try:
@@ -110,7 +109,7 @@ async def test_online_seat_check_and_parallel_scopes_are_restored():
 
         assert await asyncio.gather(read(2), read(3)) == [(2, frozenset({1, 2})), (3, frozenset({1, 3}))]
         seats.active = False
-        with pytest.raises(DshSeatRevokedError):
+        with pytest.raises(DshSessionRevokedError):
             await access.authenticate("Bearer " + token())
         with pytest.raises(asyncio.CancelledError), principal_scope(principal):
             assert context.get_current_tenant_id() == 2

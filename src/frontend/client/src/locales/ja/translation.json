@@ -2374,6 +2374,11 @@
       "hundredBillion": "千億",
       "hundredMillion": "億",
       "tenThousand": "万"
+    },
+    "credits": {
+      "balance": "残り {{value}} クレジット",
+      "unavailable": "残高を取得できません",
+      "help": "Chat と Work で共有し、毎月リセットします。"
     }
   },
   "com_citation.preview_loading": "プレビューを読み込み中…",

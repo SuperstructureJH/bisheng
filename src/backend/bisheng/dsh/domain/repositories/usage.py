@@ -10,9 +10,9 @@ from bisheng.core.context.tenant import get_current_tenant_id, strict_tenant_fil
 from bisheng.database.models.tenant import UserTenant
 from bisheng.dsh.domain.models.model_call import DshModelCall
 from bisheng.dsh.domain.models.monthly_usage import DshMonthlyUsage
+from bisheng.dsh.domain.models.unified_policy import PersonalLedgerState
 from bisheng.dsh.domain.models.user_policy import DshUserPolicy
-from bisheng.dsh.domain.repositories.policy import DshPolicyRepository
-from bisheng.dsh.domain.repositories.subject_policy import DshSubjectPolicyRepository
+from bisheng.dsh.domain.repositories.unified_policy import UnifiedPolicyRepository
 from bisheng.dsh.domain.schemas.model_policy import model_configs_payload
 from bisheng.dsh.domain.schemas.usage import UsageEvent
 
@@ -163,7 +163,7 @@ class DshUsageRepository:
 
         tenant = get_current_tenant_id()
         with strict_tenant_filter():
-            policy = DshSubjectPolicyRepository(self.session).effective(user_id, lock=True)
+            policy = UnifiedPolicyRepository(self.session).effective(user_id, lock=True)
             if policy is None:
                 raise ValueError("Recovery requires a current SQL user policy")
             calls = []
@@ -223,16 +223,17 @@ class DshUsageRepository:
 
     def complete_recovery(self, user_id: int, *, expected_policy: dict, epoch: int):
         """Publish the recovered epoch only if policy authority has not changed during IO."""
-        repository = DshPolicyRepository(self.session)
-        current = DshSubjectPolicyRepository(self.session).effective(user_id, lock=True)
+        current = UnifiedPolicyRepository(self.session).effective(user_id, lock=True)
         if current is None or current.recovery_payload() != expected_policy:
             raise ValueError("SQL policy changed during controlled recovery")
         if epoch < current.quota_epoch:
             raise ValueError("Recovery cannot move the policy epoch backwards")
-        for row in repository.rows(user_id):
-            row.quota_epoch = epoch
-            if not row.pending_operation_id:
-                row.quota_sync_state = "READY"
+        with strict_tenant_filter():
+            ledger = self.session.scalar(select(PersonalLedgerState).where(PersonalLedgerState.user_id == user_id))
+        if ledger is None:
+            ledger = PersonalLedgerState(tenant_id=get_current_tenant_id(), user_id=user_id)
+        ledger.quota_epoch = epoch
+        self.session.add(ledger)
         self.session.flush()
 
     def unknown_pending(self, user_id: int) -> int:
@@ -259,18 +260,17 @@ class DshUsageRepository:
                 )
                 if row.tenant_id == tenant
             ]
-            policy = DshSubjectPolicyRepository(self.session).effective(user_id)
+            policy = UnifiedPolicyRepository(self.session).effective(user_id)
             unknown_pending = self.unknown_pending(user_id)
         if not rows or policy is None or any(row.projected_at is None for row in rows):
             raise ValueError("No trustworthy persisted usage snapshot exists")
         used = sum(row.used_tokens for row in rows)
         model_limits = {str(config.model_id): config.monthly_token_limit for config in policy.model_configs}
-        models = {str(row.model_id): row.used_tokens for row in rows}
-        limit = sum(model_limits.values())
+        limit = policy.monthly_token_limit
         return {
             "used": used,
             "limit": limit,
-            "remaining": sum(max(allowed - models.get(model, 0), 0) for model, allowed in model_limits.items()),
+            "remaining": max(limit - used, 0),
             "model_limits": model_limits,
             "source": "sql_estimate",
             "unknown_pending": unknown_pending,
@@ -300,7 +300,7 @@ class DshUsageRepository:
                 )
                 if row.tenant_id == tenant
             ]
-            policy = DshSubjectPolicyRepository(self.session).effective(user_id)
+            policy = UnifiedPolicyRepository(self.session).effective(user_id)
         if calls or totals or policy is None:
             raise ValueError("Month history is not proven empty")
         return {

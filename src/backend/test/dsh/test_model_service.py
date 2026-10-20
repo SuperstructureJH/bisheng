@@ -16,7 +16,7 @@ from test.dsh.test_quota_admission import running
 
 
 def principal():
-    return DshPrincipal(tenant_id="2", user_id="20", seat_id="seat", session_id="session", grant_version=1)
+    return DshPrincipal(tenant_id="2", user_id="20", session_id="session")
 
 
 def request(stream=False):
@@ -326,9 +326,9 @@ async def test_real_redis_settlement_and_changed_model_keep_total(service_setup,
     assert await real_quota.redis.hget(real_quota.keys(running())[1], "used") == "1110"
     with pytest.raises(DshMonthlyTokenLimitExceededError):
         await service.complete(principal(), request().model_copy(update={"model": "bisheng:4"}))
-    other = await service.complete(principal(), request().model_copy(update={"model": "bisheng:5"}))
-    assert other["usage"]["total_tokens"] == 210
-    assert llm.calls == 2
+    with pytest.raises(DshMonthlyTokenLimitExceededError):
+        await service.complete(principal(), request().model_copy(update={"model": "bisheng:5"}))
+    assert llm.calls == 1
 
 
 async def test_context_length_refusal_preserves_client_error_without_freezing(service_setup):

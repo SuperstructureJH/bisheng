@@ -91,12 +91,9 @@ class UserService:
 
     @staticmethod
     def _record_profile_in_session(session, user: User):
-        from bisheng.dsh.domain.services.profile import DshProfileService
         from bisheng.user.domain.repositories.dsh_profile import UserDshProfileRepository
 
         snapshot = UserDshProfileRepository.bump_snapshot(session, user)
-        if snapshot is not None:
-            DshProfileService.record_change(session, snapshot)
         return snapshot
 
     @classmethod

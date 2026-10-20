@@ -1,3 +1,10 @@
+## 2026-10-20 — Chat / Work 统一授权与积分候选版
+
+- 用户确认授权、席位、积分及网关同轮改动。独立分支 codex/unified-model-access；BISHENG 基线 feat/bisheng-work-120@1afd96f46，网关与桌面采用配套独立分支，详见 [试改交付说明](../features/v3.0.0-beta2/062-dsh-desktop-model-access/unified-access-trial.md)。
+- 实现统一模型可见范围（全员、部门、角色、成员）和每人月度积分规则；100 万 Token = 1 分，Chat / Work 共用余额。管理员首页合并额度配置与使用数据，用户输入区显示余额；席位 UI、管理入口与网关席位限制已清理。
+- 后端 82 项、管理端 109 项、Chat 余额交互 1 项通过；网页生产构建及 strict 类型检查通过。网关 53 项通过 / 5 项外部存储跳过，Desktop 55 项及类型检查通过。
+- 提供 SQL 升级和旧 Work 授权迁移脚本，保留历史消耗及账本恢复版本。旧 Chat 名单需人工复核。三端真实联调、MySQL/达梦升级、原生客户端和跨平台验收待执行；当前为本地候选，尚未部署。
+
 ## 2026-10-20 — 技能选择器文字对齐 Work
 
 - Work Harness 0.2.0-rc.2 的 popupSelect 使用名称 12px、描述 11px；Chat 原来为 13px / 12px，名称字重已为 400。技能内容来源与文字样式独立处理。

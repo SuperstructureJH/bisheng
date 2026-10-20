@@ -2380,6 +2380,11 @@
       "hundredBillion": "千亿",
       "hundredMillion": "亿",
       "tenThousand": "万"
+    },
+    "credits": {
+      "balance": "剩余 {{value}} 分",
+      "unavailable": "余额暂不可用",
+      "help": "Chat 和 Work 共用积分，每月重置。"
     }
   },
   "com_citation.preview_loading": "正在加载文件预览…",

@@ -22,7 +22,7 @@ def restore_visible_tenant_context():
 
 
 def principal():
-    return DshPrincipal(tenant_id="2", user_id="42", seat_id="seat", session_id="session", grant_version=1)
+    return DshPrincipal(tenant_id="2", user_id="42", session_id="session")
 
 
 async def test_exchange_binds_short_cookie_and_keeps_access_token_server_side(monkeypatch):

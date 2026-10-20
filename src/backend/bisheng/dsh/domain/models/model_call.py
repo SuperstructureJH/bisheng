@@ -43,9 +43,9 @@ class DshModelCall(SQLModelSerializable, table=True):
             DateTime, nullable=False, server_default=UPDATE_TIME_SERVER_DEFAULT, onupdate=text("CURRENT_TIMESTAMP")
         ),
     )
-    seat_id: str = Field(sa_column=Column(String(36), nullable=False))
+    seat_id: str | None = Field(default=None, sa_column=Column(String(36), nullable=True))
     session_id: str = Field(sa_column=Column(String(36), nullable=False))
-    grant_version: int = Field(sa_column=Column(BigInteger, nullable=False))
+    grant_version: int | None = Field(default=None, sa_column=Column(BigInteger, nullable=True))
     model_id: int = Field(sa_column=Column(BigInteger, nullable=False))
     usage_month: str = Field(sa_column=Column(String(7), nullable=False))
     policy_version: int = Field(sa_column=Column(BigInteger, nullable=False))
