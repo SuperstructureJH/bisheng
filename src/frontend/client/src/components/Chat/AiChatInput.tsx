@@ -37,7 +37,6 @@ import { useFileDropAndPaste } from "~/pages/appChat/useFileDropAndPaste";
 import { bishengConfState } from "~/pages/appChat/store/atoms";
 import { checkIfScrollable, cn, removeFocusRings } from "~/utils";
 import AiModelSelect from "./AiModelSelect";
-import { CreditBalance } from "~/components/dsh/CreditBalance";
 import type { AttachmentAsk } from "./chatAskHandoff";
 
 export interface AiChatInputFeatures {
@@ -710,7 +709,6 @@ const AiChatInput = memo(
                                     {localize('com_chat.media_parsing')}
                                 </span>
                             )}
-                            <CreditBalance running={!!isStreaming || !!taskRunning} />
                             {/* Model select */}
                             {modelSelect && modelOptions && !isLingsi && (
                                 <AiModelSelect
