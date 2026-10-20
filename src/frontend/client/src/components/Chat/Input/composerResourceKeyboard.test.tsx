@@ -36,7 +36,7 @@ test('backspace at the start removes references then files in visual order and p
 
 test('a clicked reference and focused file can be deleted, and arrows traverse resources', () => {
     render(<Composer />);
-    fireEvent.click(screen.getByText('/word').closest('[data-composer-resource]'));
+    fireEvent.click(screen.getByText('/word').closest('[data-composer-resource]')!);
     fireEvent.keyDown(document.activeElement!, { key: 'Delete' });
     expect(screen.queryByText('/word')).toBeNull();
     expect(screen.getByText('/excel').closest('[data-composer-resource]')).toHaveFocus();

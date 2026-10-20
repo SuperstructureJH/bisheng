@@ -525,6 +525,8 @@ const AiChatInput = memo(
                         <AttachmentBar
                             uploadingFiles={uploadingFiles}
                             files={chatFiles || []}
+                            kbs={[]}
+                            skills={[]}
                             onRemoveFile={disabled || isStreaming ? undefined : (file) => {
                                 // clientId, not name: a folder upload can carry the
                                 // same file name in several subdirectories.
